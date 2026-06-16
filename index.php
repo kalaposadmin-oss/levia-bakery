@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 require __DIR__ . '/lib/db.php';
 
@@ -186,25 +186,25 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/site.css">
+  <link rel="stylesheet" href="assets/site.css?v=20260616f">
 </head>
 <body>
   <div class="app-shell">
     <main class="storefront">
       <div class="top-info-bar">
-        <div class="top-info-item">📍 <?= e($storeAddress !== '' ? $storeAddress : $branch) ?></div>
-        <div class="top-info-item">● <?= e($storeStatus['label']) ?> • <?= e($storeStatus['detail']) ?></div>
+        <div class="top-info-item">?? <?= e($storeAddress !== '' ? $storeAddress : $branch) ?></div>
+        <div class="top-info-item">? <?= e($storeStatus['label']) ?> � <?= e($storeStatus['detail']) ?></div>
       </div>
 
       <header class="topbar">
         <div class="address-row">
           <div class="address-copy">
             <small>Dikirim ke:</small>
-          <button class="plain-button" type="button"><?= e($branch) ?> <span>⌄</span></button>
+          <button class="plain-button" type="button"><?= e($branch) ?> <span>?</span></button>
           </div>
-          <button class="bag-button" type="button" data-open-cart aria-label="Buka keranjang">🛍<strong data-cart-count>0</strong></button>
+          <button class="bag-button" type="button" data-open-cart aria-label="Buka keranjang">??<strong data-cart-count>0</strong></button>
         </div>
-        <label class="search-field"><span>⌕</span><input id="searchInput" type="search" placeholder="Cari kelezatan hari ini..."></label>
+        <label class="search-field"><span>?</span><input id="searchInput" type="search" placeholder="Cari kelezatan hari ini..."></label>
       </header>
 
       <section class="hero-showcase">
@@ -220,11 +220,11 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
 
       <section class="quick-actions">
         <a class="quick-action-card" href="<?= e($googleMapsUrl !== '' ? $googleMapsUrl : '#') ?>" <?= $googleMapsUrl !== '' ? 'target="_blank" rel="noopener noreferrer"' : '' ?>>
-          <span class="quick-action-icon">⌖</span>
+          <span class="quick-action-icon">?</span>
           <span>Cek Lokasi</span>
         </a>
         <a class="quick-action-card quick-action-chat" href="<?= e($whatsAppChatUrl) ?>" <?= $whatsAppNumber !== '' ? 'target="_blank" rel="noopener noreferrer"' : '' ?>>
-          <span class="quick-action-icon">◫</span>
+          <span class="quick-action-icon">?</span>
           <span>Chat WhatsApp</span>
         </a>
       </section>
@@ -314,7 +314,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
       <section class="store-card">
         <div>
           <h3><?= e($branch ?: $storeName) ?></h3>
-          <p><?= e($storeStatus['detail']) ?> • Jam hari ini <?= e($todayHoursText) ?></p>
+          <p><?= e($storeStatus['detail']) ?> � Jam hari ini <?= e($todayHoursText) ?></p>
         </div>
         <button type="button" id="storeDetailBtn">Detail</button>
       </section>
@@ -338,16 +338,16 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
   </div>
 
   <nav class="bottom-nav">
-    <button class="is-active" type="button">⌂<span>Boutique</span></button>
-    <button type="button" data-open-cart>▤<span>Request</span></button>
-    <button type="button">♡<span>Favorites</span></button>
-    <button type="button">♙<span>Profile</span></button>
+    <button class="is-active" type="button">�<span>Boutique</span></button>
+    <button type="button" data-open-cart>?<span>Request</span></button>
+    <button type="button">?<span>Favorites</span></button>
+    <button type="button">?<span>Profile</span></button>
   </nav>
 
   <div class="cart-drawer" id="cartDrawer" aria-hidden="true">
     <button class="drawer-backdrop" type="button" data-close-cart></button>
     <section class="drawer-panel">
-      <div class="drawer-head"><div><small>Request menu</small><h2>WhatsApp</h2></div><button type="button" data-close-cart>×</button></div>
+      <div class="drawer-head"><div><small>Request menu</small><h2>WhatsApp</h2></div><button type="button" data-close-cart>�</button></div>
       <div id="cartItems" class="cart-items"></div>
       <form id="checkoutForm" class="checkout-form">
         <input type="hidden" name="_token" value="<?= e(csrf_token()) ?>">
@@ -377,7 +377,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
   <div class="product-modal" id="productModal" aria-hidden="true">
     <button class="product-modal-backdrop" type="button" data-close-product-detail aria-label="Tutup detail produk"></button>
     <section class="product-detail-panel" role="dialog" aria-modal="true" aria-labelledby="productDetailName">
-      <button class="product-detail-close" type="button" data-close-product-detail aria-label="Tutup detail produk">×</button>
+      <button class="product-detail-close" type="button" data-close-product-detail aria-label="Tutup detail produk">�</button>
       <img class="product-detail-image" id="productDetailImage" src="" alt="">
       <div class="product-detail-body">
         <div class="product-detail-title-row">
@@ -411,7 +411,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
     window.LEVIA_ADMIN_WHATSAPP = <?= json_encode($whatsAppNumber, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     window.LEVIA_STORE_NAME = <?= json_encode($storeName, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
   </script>
-  <script src="assets/app.js"></script>
+  <script src="assets/app.js?v=20260616f"></script>
 </body>
 </html>
 
