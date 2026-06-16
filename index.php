@@ -1,4 +1,4 @@
-<?php
+ï»¿<?php
 
 require __DIR__ . '/lib/db.php';
 
@@ -84,7 +84,8 @@ function default_blog_section(): array
         'title' => 'Dedikasi Artisan',
         'body' => 'Setiap adonan kami uleni dengan tangan, lalu difermentasi perlahan agar rasa dan teksturnya tetap hidup sampai ke meja pelanggan.',
         'image' => 'assets/pairing.png',
-        'button_label' => 'Lihat katalog',
+        'button_label' => 'Baca blog',
+        'url' => '#blogSection',
     ];
 }
 
@@ -102,6 +103,7 @@ function normalize_blog_section(string $json): array
         'body' => trim((string) ($decoded['body'] ?? $defaults['body'])),
         'image' => trim((string) ($decoded['image'] ?? $defaults['image'])),
         'button_label' => trim((string) ($decoded['button_label'] ?? $defaults['button_label'])),
+        'url' => trim((string) ($decoded['url'] ?? $defaults['url'])),
     ];
 }
 
@@ -115,7 +117,8 @@ function homepage_blog_section(): array
                 'title' => trim((string) $blog['title']),
                 'body' => trim((string) ($blog['excerpt'] ?: $blog['content'] ?: '')),
                 'image' => trim((string) ($blog['image'] ?: 'assets/pairing.png')),
-                'button_label' => 'Lihat katalog',
+                'button_label' => 'Baca blog',
+                'url' => 'blog.php?slug=' . rawurlencode((string) $blog['slug']),
             ];
         }
     } catch (Throwable $e) {
@@ -190,21 +193,21 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
 </head>
 <body>
   <div class="app-shell">
-    <main class="storefront">
+    <main class="storefront" id="top">
       <div class="top-info-bar">
-        <div class="top-info-item">?? <?= e($storeAddress !== '' ? $storeAddress : $branch) ?></div>
-        <div class="top-info-item">? <?= e($storeStatus['label']) ?> • <?= e($storeStatus['detail']) ?></div>
+        <div class="top-info-item"><span class="ui-icon icon-location" aria-hidden="true"></span><?= e($storeAddress !== '' ? $storeAddress : $branch) ?></div>
+        <div class="top-info-item"><span class="ui-icon icon-status" aria-hidden="true"></span><?= e($storeStatus['label']) ?> &bull; <?= e($storeStatus['detail']) ?></div>
       </div>
 
       <header class="topbar">
         <div class="address-row">
           <div class="address-copy">
             <small>Dikirim ke:</small>
-          <button class="plain-button" type="button"><?= e($branch) ?> <span>?</span></button>
+          <button class="plain-button" type="button"><?= e($branch) ?> <span class="ui-icon icon-chevron" aria-hidden="true"></span></button>
           </div>
-          <button class="bag-button" type="button" data-open-cart aria-label="Buka keranjang">??<strong data-cart-count>0</strong></button>
+          <button class="bag-button" type="button" data-open-cart aria-label="Buka keranjang"><span class="ui-icon icon-cart" aria-hidden="true"></span><strong data-cart-count>0</strong></button>
         </div>
-        <label class="search-field"><span>?</span><input id="searchInput" type="search" placeholder="Cari kelezatan hari ini..."></label>
+        <label class="search-field"><span class="ui-icon icon-search" aria-hidden="true"></span><input id="searchInput" type="search" placeholder="Cari kelezatan hari ini..."></label>
       </header>
 
       <section class="hero-showcase">
@@ -220,12 +223,10 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
 
       <section class="quick-actions">
         <a class="quick-action-card" href="<?= e($googleMapsUrl !== '' ? $googleMapsUrl : '#') ?>" <?= $googleMapsUrl !== '' ? 'target="_blank" rel="noopener noreferrer"' : '' ?>>
-          <span class="quick-action-icon">?</span>
-          <span>Cek Lokasi</span>
+          <span class="quick-action-icon"><span class="ui-icon icon-location" aria-hidden="true"></span></span><span>Cek Lokasi</span>
         </a>
         <a class="quick-action-card quick-action-chat" href="<?= e($whatsAppChatUrl) ?>" <?= $whatsAppNumber !== '' ? 'target="_blank" rel="noopener noreferrer"' : '' ?>>
-          <span class="quick-action-icon">?</span>
-          <span>Chat WhatsApp</span>
+          <span class="quick-action-icon"><span class="ui-icon icon-chat" aria-hidden="true"></span></span><span>Chat WhatsApp</span>
         </a>
       </section>
 
@@ -314,21 +315,21 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
       <section class="store-card">
         <div>
           <h3><?= e($branch ?: $storeName) ?></h3>
-          <p><?= e($storeStatus['detail']) ?> • Jam hari ini <?= e($todayHoursText) ?></p>
+          <p><?= e($storeStatus['detail']) ?> â€¢ Jam hari ini <?= e($todayHoursText) ?></p>
         </div>
         <button type="button" id="storeDetailBtn">Detail</button>
       </section>
       <?php endif; ?>
 
       <?php if ($showBlogSection): ?>
-      <section class="story-section blog-section">
+      <section class="story-section blog-section" id="blogSection">
         <article class="blog-feature">
           <img src="<?= e($blogSection['image']) ?>" alt="<?= e($blogSection['title']) ?>">
           <div class="blog-copy">
             <small><?= e($blogSection['eyebrow']) ?></small>
             <h2><?= e($blogSection['title']) ?></h2>
             <p><?= e($blogSection['body']) ?></p>
-            <a href="#stockList"><?= e($blogSection['button_label']) ?> <span>?</span></a>
+            <a href="<?= e($blogSection['url'] ?? '#blogSection') ?>"><?= e($blogSection['button_label']) ?> <span>&rarr;</span></a>
           </div>
         </article>
       </section>
@@ -338,16 +339,16 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
   </div>
 
   <nav class="bottom-nav">
-    <button class="is-active" type="button">¦<span>Boutique</span></button>
-    <button type="button" data-open-cart>?<span>Request</span></button>
-    <button type="button">?<span>Favorites</span></button>
-    <button type="button">?<span>Profile</span></button>
+    <a class="is-active" href="index.php#top"><span class="ui-icon icon-home" aria-hidden="true"></span><span>Beranda</span></a>
+    <a href="index.php#catalogSection"><span class="ui-icon icon-catalog" aria-hidden="true"></span><span>Katalog</span></a>
+    <a href="index.php#blogSection"><span class="ui-icon icon-blog" aria-hidden="true"></span><span>Blog</span></a>
+    <a href="#profile"><span class="ui-icon icon-profile" aria-hidden="true"></span><span>Profile</span></a>
   </nav>
 
   <div class="cart-drawer" id="cartDrawer" aria-hidden="true">
     <button class="drawer-backdrop" type="button" data-close-cart></button>
     <section class="drawer-panel">
-      <div class="drawer-head"><div><small>Request menu</small><h2>WhatsApp</h2></div><button type="button" data-close-cart>×</button></div>
+      <div class="drawer-head"><div><small>Request menu</small><h2>WhatsApp</h2></div><button type="button" data-close-cart>x</button></div>
       <div id="cartItems" class="cart-items"></div>
       <form id="checkoutForm" class="checkout-form">
         <input type="hidden" name="_token" value="<?= e(csrf_token()) ?>">
@@ -377,7 +378,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
   <div class="product-modal" id="productModal" aria-hidden="true">
     <button class="product-modal-backdrop" type="button" data-close-product-detail aria-label="Tutup detail produk"></button>
     <section class="product-detail-panel" role="dialog" aria-modal="true" aria-labelledby="productDetailName">
-      <button class="product-detail-close" type="button" data-close-product-detail aria-label="Tutup detail produk">×</button>
+      <button class="product-detail-close" type="button" data-close-product-detail aria-label="Tutup detail produk">x</button>
       <img class="product-detail-image" id="productDetailImage" src="" alt="">
       <div class="product-detail-body">
         <div class="product-detail-title-row">
@@ -414,4 +415,6 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
   <script src="assets/app.js?v=20260616f"></script>
 </body>
 </html>
+
+
 

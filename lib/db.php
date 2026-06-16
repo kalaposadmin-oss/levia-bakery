@@ -1,4 +1,3 @@
-```php
 <?php
 
 declare(strict_types=1);
@@ -170,4 +169,3 @@ function upload_image(string $field, ?string $fallback = null): ?string
 
     return 'uploads/' . $name;
 }
-```
