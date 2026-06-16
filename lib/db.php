@@ -1,13 +1,18 @@
+```php
 <?php
 
 declare(strict_types=1);
 
 $sessionPath = __DIR__ . '/../storage/sessions';
+
 if (!is_dir($sessionPath)) {
     mkdir($sessionPath, 0775, true);
 }
-session_save_path($sessionPath);
-session_start();
+
+if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
+    session_save_path($sessionPath);
+    session_start();
+}
 
 function config(): array
 {
@@ -81,19 +86,23 @@ function admin(): ?array
     if (empty($_SESSION['admin_id'])) {
         return null;
     }
+
     $stmt = db()->prepare('SELECT * FROM admins WHERE id = ? LIMIT 1');
     $stmt->execute([$_SESSION['admin_id']]);
     $admin = $stmt->fetch();
+
     return $admin ?: null;
 }
 
 function require_admin(): array
 {
     $admin = admin();
+
     if (!$admin) {
         header('Location: ' . base_url('admin/login.php'));
         exit;
     }
+
     return $admin;
 }
 
@@ -107,6 +116,7 @@ function slugify(string $text): string
 {
     $text = strtolower(trim($text));
     $text = preg_replace('/[^a-z0-9]+/', '-', $text) ?: '';
+
     return trim($text, '-') ?: 'item-' . time();
 }
 
@@ -115,12 +125,18 @@ function setting(string $key, ?string $default = null): ?string
     $stmt = db()->prepare('SELECT setting_value FROM settings WHERE setting_key = ?');
     $stmt->execute([$key]);
     $value = $stmt->fetchColumn();
+
     return $value === false ? $default : (string) $value;
 }
 
 function set_setting(string $key, string $value): void
 {
-    $stmt = db()->prepare('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)');
+    $stmt = db()->prepare('
+        INSERT INTO settings (setting_key, setting_value)
+        VALUES (?, ?)
+        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
+    ');
+
     $stmt->execute([$key, $value]);
 }
 
@@ -130,19 +146,28 @@ function upload_image(string $field, ?string $fallback = null): ?string
         return $fallback;
     }
 
-    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+    $allowed = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+    ];
+
     $mime = mime_content_type($_FILES[$field]['tmp_name']);
+
     if (!isset($allowed[$mime])) {
         return $fallback;
     }
 
     $dir = __DIR__ . '/../uploads';
+
     if (!is_dir($dir)) {
         mkdir($dir, 0775, true);
     }
 
     $name = date('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
+
     move_uploaded_file($_FILES[$field]['tmp_name'], $dir . '/' . $name);
 
     return 'uploads/' . $name;
 }
+```

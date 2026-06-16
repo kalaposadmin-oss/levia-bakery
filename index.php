@@ -140,6 +140,8 @@ $storeAddress = setting('store_address', '');
 $googleMapsUrl = trim((string) setting('google_maps_url', ''));
 $whatsApp = trim((string) setting('whatsapp', ''));
 $whatsAppNumber = whatsapp_number($whatsApp);
+$whatsAppChatText = trim((string) setting('whatsapp_chat_text', 'Halo ' . $storeName . ', saya mau tanya menu hari ini.'));
+$whatsAppChatUrl = $whatsAppNumber !== '' ? 'https://wa.me/' . $whatsAppNumber . ($whatsAppChatText !== '' ? '?text=' . rawurlencode($whatsAppChatText) : '') : '#';
 $storeHours = normalize_hours_schedule((string) setting('store_hours_json', ''));
 $showHeroPromo = homepage_section_enabled('show_hero_promo');
 $showBestSellers = homepage_section_enabled('show_best_sellers');
@@ -221,7 +223,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
           <span class="quick-action-icon">⌖</span>
           <span>Cek Lokasi</span>
         </a>
-        <a class="quick-action-card quick-action-chat" href="<?= e($whatsAppNumber !== '' ? 'https://wa.me/' . $whatsAppNumber : '#') ?>" <?= $whatsAppNumber !== '' ? 'target="_blank" rel="noopener noreferrer"' : '' ?>>
+        <a class="quick-action-card quick-action-chat" href="<?= e($whatsAppChatUrl) ?>" <?= $whatsAppNumber !== '' ? 'target="_blank" rel="noopener noreferrer"' : '' ?>>
           <span class="quick-action-icon">◫</span>
           <span>Chat WhatsApp</span>
         </a>

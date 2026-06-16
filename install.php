@@ -118,6 +118,7 @@ function seedData(PDO $pdo): void
             'sun' => ['open' => '00:00', 'close' => '00:00', 'active' => 0],
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
         'whatsapp' => '6281234567890',
+        'whatsapp_chat_text' => 'Halo Levia Bakery, saya mau tanya menu hari ini.',
         'delivery_options_json' => json_encode([
             ['value' => 'pickup', 'label' => 'Ambil Sendiri', 'needs_address' => false, 'maps_url' => ''],
             ['value' => 'home_bake', 'label' => 'Home Bake', 'needs_address' => true, 'maps_url' => ''],

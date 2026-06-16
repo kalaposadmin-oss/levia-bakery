@@ -163,7 +163,7 @@ function uploaded_image_path(string $field, string $prefix, ?string $fallback = 
     return 'uploads/' . $name;
 }
 
-$settingKeys = ['store_name', 'store_branch', 'store_address', 'whatsapp', 'google_maps_url'];
+$settingKeys = ['store_name', 'store_branch', 'store_address', 'whatsapp', 'whatsapp_chat_text', 'google_maps_url'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
@@ -294,6 +294,7 @@ ob_start();
             <label>WhatsApp <input name="whatsapp" value="<?= e(setting('whatsapp', '')) ?>" placeholder="0812xxxxxxx atau 62812xxxxxxx"></label>
             <label>Link Google Maps <input name="google_maps_url" value="<?= e(setting('google_maps_url', '')) ?>" placeholder="https://maps.google.com/..."></label>
           </div>
+          <label style="margin-top:18px;">Teks awal chat WhatsApp<textarea name="whatsapp_chat_text" rows="3" placeholder="Halo Levia Bakery, saya mau tanya menu hari ini."><?= e(setting('whatsapp_chat_text', 'Halo Levia Bakery, saya mau tanya menu hari ini.')) ?></textarea></label>
           <label style="margin-top:18px;">Alamat utama toko<textarea name="store_address" rows="4"><?= e(setting('store_address', '')) ?></textarea></label>
         </div>
       </section>
