@@ -42,6 +42,8 @@ const state = {
 
 const bestSellerList = document.querySelector("#bestSellerList");
 const stockList = document.querySelector("#stockList");
+const catalogSection = document.querySelector("#catalogSection");
+const catalogTitle = document.querySelector("#catalogTitle");
 const searchInput = document.querySelector("#searchInput");
 const cartDrawer = document.querySelector("#cartDrawer");
 const cartItems = document.querySelector("#cartItems");
@@ -68,6 +70,14 @@ const productDetailAddBtn = document.querySelector("#productDetailAddBtn");
 
 function money(value) {
   return rupiah.format(value).replace(/\s/g, " ");
+}
+
+function whatsappNumber(value) {
+  const number = String(value || "").replace(/\D+/g, "");
+  if (!number) return "";
+  if (number.startsWith("0")) return `62${number.slice(1)}`;
+  if (number.startsWith("8")) return `62${number}`;
+  return number;
 }
 
 function escapeHtml(value) {
@@ -237,6 +247,18 @@ function syncDeliveryAddress() {
   deliveryMapsLink.hidden = true;
 }
 
+function categoryLabel(category) {
+  const button = Array.from(document.querySelectorAll(".category")).find((item) => item.dataset.category === category);
+  return button ? (button.dataset.categoryLabel || button.textContent.trim()) : "Semua";
+}
+
+function scrollToCatalog() {
+  if (!catalogSection) return;
+  const headerOffset = document.querySelector(".topbar")?.offsetHeight || 0;
+  const top = catalogSection.getBoundingClientRect().top + window.scrollY - headerOffset - 14;
+  window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+}
+
 function checkoutSummaryText(orderCode, stats, formData) {
   const option = getDeliveryOption(String(formData.get("delivery_method") || ""));
   const lines = cartLines()
@@ -261,7 +283,7 @@ function checkoutSummaryText(orderCode, stats, formData) {
 }
 
 function openAdminWhatsApp(orderCode, stats, formData) {
-  const phone = String(window.LEVIA_ADMIN_WHATSAPP || "").replace(/\D+/g, "");
+  const phone = whatsappNumber(window.LEVIA_ADMIN_WHATSAPP);
   if (!phone) {
     showToast(`Request ${orderCode} tersimpan. Nomor WhatsApp toko belum diset.`);
     return;
@@ -312,12 +334,18 @@ function renderCart() {
   if (checkoutBtn) checkoutBtn.disabled = stats.items === 0 || checkoutBtn.dataset.storeClosed === '1';
 }
 
-function setCategory(category) {
+function setCategory(category, shouldScroll = false) {
   state.category = category;
   document.querySelectorAll(".category").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.category === category);
   });
+  if (catalogTitle) {
+    catalogTitle.textContent = category === "all" ? "Katalog Hari Ini" : `Katalog: ${categoryLabel(category)}`;
+  }
   renderProducts();
+  if (shouldScroll) {
+    window.requestAnimationFrame(scrollToCatalog);
+  }
 }
 
 function addToCart(id, qty = 1) {
@@ -416,14 +444,14 @@ document.addEventListener("click", (event) => {
   if (target.dataset.add) addToCart(target.dataset.add);
   if (target.dataset.increment) changeQty(target.dataset.increment, 1);
   if (target.dataset.decrement) changeQty(target.dataset.decrement, -1);
-  if (target.dataset.category) setCategory(target.dataset.category);
-  if (target.dataset.categoryJump) setCategory(target.dataset.categoryJump);
+  if (target.dataset.category) setCategory(target.dataset.category, true);
+  if (target.dataset.categoryJump) setCategory(target.dataset.categoryJump, true);
   if (target.dataset.openCart !== undefined) openCart();
   if (target.dataset.closeCart !== undefined) closeCart();
   if (target.dataset.closeProductDetail !== undefined) closeProductDetail();
 
   if (target.dataset.promo) {
-    setCategory("promo");
+    setCategory("promo", true);
     showToast(`${target.dataset.promo} aktif.`);
   }
 

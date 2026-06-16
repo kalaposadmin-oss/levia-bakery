@@ -59,6 +59,24 @@ function homepage_section_enabled(string $key): bool
     return setting($key, '1') !== '0';
 }
 
+function whatsapp_number(?string $value): string
+{
+    $number = preg_replace('/\D+/', '', (string) $value) ?: '';
+    if ($number === '') {
+        return '';
+    }
+
+    if (str_starts_with($number, '0')) {
+        return '62' . substr($number, 1);
+    }
+
+    if (str_starts_with($number, '8')) {
+        return '62' . $number;
+    }
+
+    return $number;
+}
+
 $hero = json_decode((string) setting('hero_promo_json', ''), true);
 if (!is_array($hero)) {
     $hero = $promos[0] ?? ['title' => 'Promo Special', 'subtitle' => 'Diskon 20% khusus croissant pagi.', 'image' => 'assets/hero-promo.png'];
@@ -73,6 +91,7 @@ $storeName = setting('store_name', 'Levia Bakery');
 $storeAddress = setting('store_address', '');
 $googleMapsUrl = trim((string) setting('google_maps_url', ''));
 $whatsApp = trim((string) setting('whatsapp', ''));
+$whatsAppNumber = whatsapp_number($whatsApp);
 $storeHours = normalize_hours_schedule((string) setting('store_hours_json', ''));
 $showBestSellers = homepage_section_enabled('show_best_sellers');
 $showPromos = homepage_section_enabled('show_promos');
@@ -150,7 +169,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
           <span class="quick-action-icon">⌖</span>
           <span>Cek Lokasi</span>
         </a>
-        <a class="quick-action-card quick-action-chat" href="<?= e($whatsApp !== '' ? 'https://wa.me/' . preg_replace('/\D+/', '', $whatsApp) : '#') ?>" <?= $whatsApp !== '' ? 'target="_blank" rel="noopener noreferrer"' : '' ?>>
+        <a class="quick-action-card quick-action-chat" href="<?= e($whatsAppNumber !== '' ? 'https://wa.me/' . $whatsAppNumber : '#') ?>" <?= $whatsAppNumber !== '' ? 'target="_blank" rel="noopener noreferrer"' : '' ?>>
           <span class="quick-action-icon">◫</span>
           <span>Chat WhatsApp</span>
         </a>
@@ -165,7 +184,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
 
       <section class="category-grid">
         <?php foreach ($categoryChips as $chip): ?>
-          <button class="category <?= $chip['slug'] === 'promo' ? 'pink' : '' ?> <?= $chip['slug'] === 'all' ? 'is-active' : '' ?>" type="button" data-category="<?= e($chip['slug']) ?>">
+          <button class="category <?= $chip['slug'] === 'promo' ? 'pink' : '' ?> <?= $chip['slug'] === 'all' ? 'is-active' : '' ?>" type="button" data-category="<?= e($chip['slug']) ?>" data-category-label="<?= e($chip['label']) ?>">
             <span><?= e($chip['icon']) ?></span>
             <?= e($chip['label']) ?>
           </button>
@@ -211,8 +230,8 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
       <?php endif; ?>
 
       <?php if ($showTodayCatalog): ?>
-      <section class="section-block">
-        <div class="section-title"><h2>Katalog Hari Ini</h2><button type="button" data-category-jump="all">Semua</button></div>
+      <section class="section-block catalog-section" id="catalogSection">
+        <div class="section-title"><h2 id="catalogTitle">Katalog Hari Ini</h2><button type="button" data-category-jump="all">Semua</button></div>
         <p class="section-note">Ketersediaan final dikonfirmasi lewat WhatsApp</p>
         <div class="product-grid" id="stockList">
           <?php foreach ($products as $product): ?>
@@ -327,7 +346,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
     window.LEVIA_PRODUCTS = <?= json_encode($products, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     window.LEVIA_ORDER_ENDPOINT = "api/order-create.php";
     window.LEVIA_DELIVERY_OPTIONS = <?= json_encode($deliveryOptions, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
-    window.LEVIA_ADMIN_WHATSAPP = <?= json_encode(preg_replace('/\D+/', '', $whatsApp), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+    window.LEVIA_ADMIN_WHATSAPP = <?= json_encode($whatsAppNumber, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     window.LEVIA_STORE_NAME = <?= json_encode($storeName, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
   </script>
   <script src="assets/app.js"></script>

@@ -240,7 +240,7 @@ ob_start();
           <div class="form-grid">
             <label>Nama toko <input name="store_name" value="<?= e(setting('store_name', 'Levia Bakery')) ?>"></label>
             <label>Cabang <input name="store_branch" value="<?= e(setting('store_branch', 'Gading Serpong')) ?>"></label>
-            <label>WhatsApp <input name="whatsapp" value="<?= e(setting('whatsapp', '')) ?>" placeholder="62812xxxxxxx"></label>
+            <label>WhatsApp <input name="whatsapp" value="<?= e(setting('whatsapp', '')) ?>" placeholder="0812xxxxxxx atau 62812xxxxxxx"></label>
             <label>Link Google Maps <input name="google_maps_url" value="<?= e(setting('google_maps_url', '')) ?>" placeholder="https://maps.google.com/..."></label>
           </div>
           <label style="margin-top:18px;">Alamat utama toko<textarea name="store_address" rows="4"><?= e(setting('store_address', '')) ?></textarea></label>
