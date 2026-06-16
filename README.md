@@ -1,15 +1,15 @@
-# Levia Bakery System
+# Levia Bakery Daily Catalog
 
-Aplikasi order Levia Bakery mandiri dengan PHP + MySQL. Folder ini terpisah dari Kalakasir utama.
+Aplikasi katalog harian Levia Bakery dengan PHP + MySQL. Web ini menjadi etalase menu dan pintu masuk obrolan WhatsApp, bukan pengganti sistem kasir utama.
 
 ## Fitur
 
 - Storefront pelanggan seperti desain mobile Levia Bakery.
 - Produk dibaca dari database.
-- Keranjang dan checkout.
-- Pesanan tersimpan ke database.
-- Stok otomatis berkurang saat checkout.
-- Backoffice untuk dashboard, produk, stok, promo/banner, pesanan, dan setting toko.
+- Keranjang request menu untuk diteruskan ke WhatsApp admin.
+- Request WA tersimpan sebagai arsip ringan di database.
+- Indikator ketersediaan harian tetap ada, tetapi stok final dikonfirmasi lewat WhatsApp.
+- Backoffice untuk dashboard, katalog produk, ketersediaan harian, promo/banner, arsip request WA, dan setting toko.
 
 ## Cara install di hosting
 
@@ -38,7 +38,7 @@ Pastikan folder `uploads/` dan `storage/sessions/` writable oleh PHP hosting.
 
 - `index.php`: storefront pelanggan.
 - `admin/`: backoffice.
-- `api/order-create.php`: endpoint checkout.
+- `api/order-create.php`: endpoint request WA.
 - `database.sql`: struktur tabel.
 - `config.php`: koneksi database.
 - `uploads/`: file gambar baru dari backoffice.

@@ -25,8 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body class="install-page">
   <main class="login-card">
-    <h1>Levia Backoffice</h1>
-    <p>Kelola produk, stok, promo, dan pesanan.</p>
+    <h1>Levia Daily Catalog</h1>
+    <p>Kelola katalog harian, ketersediaan, promo, dan tujuan WhatsApp.</p>
     <?php if ($error): ?><div class="alert danger"><?= e($error) ?></div><?php endif; ?>
     <form method="post">
       <input type="hidden" name="_token" value="<?= e(csrf_token()) ?>">

@@ -83,28 +83,21 @@ if (!is_array($deliveryOptions) || !$deliveryOptions) {
     ];
 }
 
-$categoryMap = [];
-foreach ($categories as $category) {
-    $categoryMap[$category['slug']] = $category;
-}
+$categoryChips = array_map(fn($category) => [
+    'slug' => (string) $category['slug'],
+    'label' => (string) $category['name'],
+    'icon' => strtoupper(substr((string) ($category['icon'] ?: $category['name']), 0, 1)),
+], $categories);
 
-$categoryChips = [
-    ['slug' => 'roti-manis', 'label' => 'Roti Manis', 'icon' => 'R'],
-    ['slug' => 'roti-tawar', 'label' => 'Roti Tawar', 'icon' => 'T'],
-    ['slug' => 'croissant', 'label' => 'Croissant', 'icon' => 'C'],
-    ['slug' => 'camilan', 'label' => 'Camilan', 'icon' => 'M'],
-    ['slug' => 'promo', 'label' => 'Promo', 'icon' => 'P'],
-    ['slug' => 'popular', 'label' => 'Terlaris', 'icon' => '*'],
-    ['slug' => 'kopi', 'label' => 'Kopi', 'icon' => 'K'],
-    ['slug' => 'all', 'label' => 'Lainnya', 'icon' => '#'],
-];
+array_unshift($categoryChips, ['slug' => 'popular', 'label' => 'Terlaris', 'icon' => '*']);
+$categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
 ?>
 <!doctype html>
 <html lang="id">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><?= e($storeName) ?> Order Web</title>
+  <title><?= e($storeName) ?> Daily Catalog</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -160,7 +153,6 @@ $categoryChips = [
 
       <section class="category-grid">
         <?php foreach ($categoryChips as $chip): ?>
-          <?php if (!isset($categoryMap[$chip['slug']]) && !in_array($chip['slug'], ['popular', 'all'], true)) { continue; } ?>
           <button class="category <?= $chip['slug'] === 'promo' ? 'pink' : '' ?> <?= $chip['slug'] === 'all' ? 'is-active' : '' ?>" type="button" data-category="<?= e($chip['slug']) ?>">
             <span><?= e($chip['icon']) ?></span>
             <?= e($chip['label']) ?>
@@ -176,8 +168,8 @@ $categoryChips = [
             <article class="product-card" data-product-id="<?= e((string) $product['id']) ?>">
               <div class="product-image">
                 <img src="<?= e($product['image'] ?: 'assets/almond-croissant.png') ?>" alt="<?= e($product['name']) ?>">
-                <span class="badge <?= (($product['stock_status'] ?? '') === 'limited') ? 'limited' : (((int) $product['stock'] <= 0 || ($product['stock_status'] ?? '') === 'sold_out') ? 'sold-out' : 'ready') ?>">
-                  <?= ((int) $product['stock'] <= 0 || ($product['stock_status'] ?? '') === 'sold_out') ? 'Sold Out' : (($product['stock_status'] ?? '') === 'limited' ? 'Limited' : 'Ready Stock') ?>
+                <span class="badge <?= (($product['stock_status'] ?? '') === 'limited') ? 'limited' : ((($product['stock_status'] ?? '') === 'sold_out') ? 'sold-out' : 'ready') ?>">
+                  <?= (($product['stock_status'] ?? '') === 'sold_out') ? 'Habis' : (($product['stock_status'] ?? '') === 'limited' ? 'Terbatas' : 'Ready') ?>
                 </span>
               </div>
               <div class="product-body">
@@ -203,15 +195,15 @@ $categoryChips = [
       </section>
 
       <section class="section-block">
-        <div class="section-title"><h2>Stok Hari Ini</h2><button type="button" data-category-jump="all">Semua</button></div>
-        <p class="section-note">Baru saja keluar dari oven kami</p>
+        <div class="section-title"><h2>Katalog Hari Ini</h2><button type="button" data-category-jump="all">Semua</button></div>
+        <p class="section-note">Ketersediaan final dikonfirmasi lewat WhatsApp</p>
         <div class="product-grid" id="stockList">
           <?php foreach ($products as $product): ?>
             <article class="product-card" data-product-id="<?= e((string) $product['id']) ?>">
               <div class="product-image">
                 <img src="<?= e($product['image'] ?: 'assets/almond-croissant.png') ?>" alt="<?= e($product['name']) ?>">
-                <span class="badge <?= (($product['stock_status'] ?? '') === 'limited') ? 'limited' : (((int) $product['stock'] <= 0 || ($product['stock_status'] ?? '') === 'sold_out') ? 'sold-out' : 'ready') ?>">
-                  <?= ((int) $product['stock'] <= 0 || ($product['stock_status'] ?? '') === 'sold_out') ? 'Sold Out' : (($product['stock_status'] ?? '') === 'limited' ? 'Limited' : 'Ready Stock') ?>
+                <span class="badge <?= (($product['stock_status'] ?? '') === 'limited') ? 'limited' : ((($product['stock_status'] ?? '') === 'sold_out') ? 'sold-out' : 'ready') ?>">
+                  <?= (($product['stock_status'] ?? '') === 'sold_out') ? 'Habis' : (($product['stock_status'] ?? '') === 'limited' ? 'Terbatas' : 'Ready') ?>
                 </span>
               </div>
               <div class="product-body">
@@ -248,7 +240,7 @@ $categoryChips = [
 
   <nav class="bottom-nav">
     <button class="is-active" type="button">⌂<span>Boutique</span></button>
-    <button type="button" data-open-cart>▤<span>Orders</span></button>
+    <button type="button" data-open-cart>▤<span>Request</span></button>
     <button type="button">♡<span>Favorites</span></button>
     <button type="button">♙<span>Profile</span></button>
   </nav>
@@ -256,12 +248,12 @@ $categoryChips = [
   <div class="cart-drawer" id="cartDrawer" aria-hidden="true">
     <button class="drawer-backdrop" type="button" data-close-cart></button>
     <section class="drawer-panel">
-      <div class="drawer-head"><div><small>Pesanan kamu</small><h2>Keranjang</h2></div><button type="button" data-close-cart>×</button></div>
+      <div class="drawer-head"><div><small>Request menu</small><h2>WhatsApp</h2></div><button type="button" data-close-cart>×</button></div>
       <div id="cartItems" class="cart-items"></div>
       <form id="checkoutForm" class="checkout-form">
         <input type="hidden" name="_token" value="<?= e(csrf_token()) ?>">
         <label>Nama pelanggan <input name="customer_name" required placeholder="Nama lengkap"></label>
-        <label>No. WhatsApp <input name="customer_phone" value="<?= e($whatsApp) ?>"></label>
+        <label>No. WhatsApp <input name="customer_phone" placeholder="62812xxxxxxx"></label>
         <label>Metode kirim
           <select name="delivery_method" id="deliveryMethod">
             <option value="pickup">Ambil Sendiri</option>
@@ -269,7 +261,7 @@ $categoryChips = [
         </label>
         <a id="deliveryMapsLink" class="maps-link" href="#" target="_blank" rel="noopener noreferrer" hidden></a>
         <label>Alamat / titik antar <textarea name="delivery_address" rows="2" id="deliveryAddress" placeholder="Alamat atau titik antar"></textarea></label>
-        <label>Catatan pesanan <textarea name="note" rows="2" placeholder="Contoh: croissant dipanaskan"></textarea></label>
+        <label>Catatan request <textarea name="note" rows="2" placeholder="Contoh: kalau stok kurang, boleh diganti"></textarea></label>
         <input type="hidden" name="cart" id="cartPayload">
       </form>
       <?php if (!$storeCanCheckout): ?>
@@ -279,7 +271,7 @@ $categoryChips = [
         </div>
       <?php endif; ?>
       <div class="checkout-summary"><span>Total</span><strong id="cartTotal">Rp 0</strong></div>
-      <button class="checkout-button" type="button" id="checkoutBtn" data-store-closed="<?= $storeCanCheckout ? '0' : '1' ?>" aria-disabled="<?= $storeCanCheckout ? 'false' : 'true' ?>" <?= $storeCanCheckout ? '' : 'disabled' ?>><?= $storeCanCheckout ? 'Buat Pesanan' : 'Toko Libur' ?></button>
+      <button class="checkout-button" type="button" id="checkoutBtn" data-store-closed="<?= $storeCanCheckout ? '0' : '1' ?>" aria-disabled="<?= $storeCanCheckout ? 'false' : 'true' ?>" <?= $storeCanCheckout ? '' : 'disabled' ?>><?= $storeCanCheckout ? 'Lanjut ke WhatsApp' : 'Toko Libur' ?></button>
     </section>
   </div>
 
@@ -288,6 +280,8 @@ $categoryChips = [
     window.LEVIA_PRODUCTS = <?= json_encode($products, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     window.LEVIA_ORDER_ENDPOINT = "api/order-create.php";
     window.LEVIA_DELIVERY_OPTIONS = <?= json_encode($deliveryOptions, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+    window.LEVIA_ADMIN_WHATSAPP = <?= json_encode(preg_replace('/\D+/', '', $whatsApp), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+    window.LEVIA_STORE_NAME = <?= json_encode($storeName, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
   </script>
   <script src="assets/app.js"></script>
 </body>

@@ -3,145 +3,190 @@
 require __DIR__ . '/../lib/db.php';
 require_admin();
 
-$stockStates = [
-    'ready' => ['label' => 'Ready', 'limit' => 999999],
-    'limited' => ['label' => 'Limited', 'limit' => 5],
-    'sold_out' => ['label' => 'Sold Out', 'limit' => 0],
+$availabilityStates = [
+    'ready' => ['label' => 'On bebas', 'hint' => 'Bisa request jumlah bebas'],
+    'limited' => ['label' => 'On maksimal', 'hint' => 'Bisa request sampai batas maksimal'],
+    'sold_out' => ['label' => 'Off / habis', 'hint' => 'Tampil di katalog, tidak bisa direquest'],
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
-    $productId = (int) ($_POST['product_id'] ?? 0);
-    $type = (string) ($_POST['type'] ?? '');
-    $qty = max(1, (int) ($_POST['qty'] ?? 1));
-    $note = trim((string) ($_POST['note'] ?? ''));
 
-    $stmt = db()->prepare('SELECT id FROM products WHERE id = ? LIMIT 1');
-    $stmt->execute([$productId]);
-    if (!$stmt->fetchColumn()) {
-        $_SESSION['flash'] = 'Produk tidak ditemukan.';
-        redirect('admin/stock.php');
-    }
+    $rows = (array) ($_POST['availability'] ?? []);
+    $existing = db()->query('SELECT id, stock_status, stock FROM products')->fetchAll(PDO::FETCH_UNIQUE);
+    $updated = 0;
 
-    if ($type === 'status') {
-        $status = (string) ($_POST['stock_status'] ?? 'ready');
-        $newStock = (int) ($_POST['new_stock'] ?? 0);
-        if (!array_key_exists($status, $stockStates)) {
-            $_SESSION['flash'] = 'Status stok tidak valid.';
-            redirect('admin/stock.php');
+    $pdo = db();
+    $pdo->beginTransaction();
+
+    try {
+        $updateStmt = $pdo->prepare('UPDATE products SET stock_status = ?, stock = ? WHERE id = ?');
+        $movementStmt = $pdo->prepare('INSERT INTO stock_movements (product_id, type, qty, note) VALUES (?, ?, ?, ?)');
+
+        foreach ($rows as $productId => $row) {
+            $productId = (int) $productId;
+            if (!isset($existing[$productId]) || !is_array($row)) {
+                continue;
+            }
+
+            $status = (string) ($row['stock_status'] ?? 'ready');
+            $requestLimit = max(0, (int) ($row['request_limit'] ?? 0));
+
+            if (!array_key_exists($status, $availabilityStates)) {
+                throw new RuntimeException('Status ketersediaan tidak valid.');
+            }
+
+            if ($status === 'ready' || $status === 'sold_out') {
+                $requestLimit = 0;
+            }
+
+            if ($status === 'limited' && $requestLimit < 1) {
+                throw new RuntimeException('Batas maksimal wajib diisi minimal 1 untuk status On maksimal.');
+            }
+
+            $currentStatus = (string) ($existing[$productId]['stock_status'] ?? 'ready');
+            $currentLimit = (int) ($existing[$productId]['stock'] ?? 0);
+            if ($currentStatus === $status && $currentLimit === $requestLimit) {
+                continue;
+            }
+
+            $updateStmt->execute([$status, $requestLimit, $productId]);
+            $movementStmt->execute([$productId, 'adjustment', $requestLimit, 'Set ketersediaan katalog: ' . $availabilityStates[$status]['label']]);
+            $updated++;
         }
 
-        $newStock = max(0, $newStock);
-        if ($status === 'sold_out') {
-            $newStock = 0;
-        } elseif ($status === 'limited' && $newStock > 5) {
-            $newStock = 5;
-        }
-
-        db()->prepare('UPDATE products SET stock = ?, stock_status = ? WHERE id = ?')->execute([$newStock, $status, $productId]);
-        db()->prepare('INSERT INTO stock_movements (product_id, type, qty, note) VALUES (?, ?, ?, ?)')->execute([$productId, 'adjustment', $newStock, $note ?: 'Set status stok: ' . $status]);
-        $_SESSION['flash'] = 'Status stok diperbarui.';
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        $_SESSION['flash'] = $e->getMessage();
         redirect('admin/stock.php');
     }
 
-    if (!in_array($type, ['in', 'out', 'adjustment'], true)) {
-        $_SESSION['flash'] = 'Tipe stok tidak valid.';
-        redirect('admin/stock.php');
-    }
-
-    $delta = $type === 'out' ? -$qty : $qty;
-    db()->prepare('UPDATE products SET stock = GREATEST(stock + ?, 0), stock_status = CASE WHEN GREATEST(stock + ?, 0) <= 0 THEN "sold_out" WHEN GREATEST(stock + ?, 0) <= 5 THEN "limited" ELSE "ready" END WHERE id = ?')->execute([$delta, $delta, $delta, $productId]);
-    db()->prepare('INSERT INTO stock_movements (product_id, type, qty, note) VALUES (?, ?, ?, ?)')->execute([$productId, $type, $qty, $note]);
-    $_SESSION['flash'] = 'Stok berhasil disesuaikan.';
+    $_SESSION['flash'] = $updated > 0 ? $updated . ' perubahan ketersediaan disimpan.' : 'Tidak ada perubahan ketersediaan.';
     redirect('admin/stock.php');
 }
 
-$products = db()->query('SELECT * FROM products ORDER BY name')->fetchAll();
-$movements = db()->query('SELECT sm.*, p.name product_name FROM stock_movements sm JOIN products p ON p.id = sm.product_id ORDER BY sm.id DESC LIMIT 30')->fetchAll();
-$title = 'Penyesuaian Stok';
+$products = db()->query('SELECT p.*, c.name category_name FROM products p LEFT JOIN categories c ON c.id = p.category_id ORDER BY c.sort_order, p.name')->fetchAll();
+$title = 'Ketersediaan Harian';
 ob_start();
 ?>
 <div class="page-stack">
-  <section class="page-hero" data-watermark="STOK HARI INI">
+  <section class="page-hero" data-watermark="DAILY CATALOG">
     <div class="page-hero-inner">
       <div>
-        <h3>Penyesuaian Stok</h3>
-        <p>Atur stok cepat untuk produksi harian, dan ubah status menu tanpa buka form produk satu per satu.</p>
+        <h3>Ketersediaan Harian</h3>
+        <p>Atur produk yang bisa direquest hari ini. Angka maksimal hanya batas request web, bukan stok kasir asli.</p>
       </div>
     </div>
   </section>
 
-  <section class="card form-card">
-    <div class="card-head"><h3>Kontrol Cepat</h3></div>
-    <div class="card-content">
-      <form method="post" class="form-grid">
-        <input type="hidden" name="_token" value="<?= e(csrf_token()) ?>">
-        <label>Produk
-          <select name="product_id" required>
-            <?php foreach ($products as $product): ?>
-              <option value="<?= e((string) $product['id']) ?>"><?= e($product['name']) ?> - stok <?= e((string) $product['stock']) ?></option>
-            <?php endforeach; ?>
-          </select>
-        </label>
-        <label>Status stok
-          <select name="stock_status">
-            <option value="ready">Ready</option>
-            <option value="limited">Limited</option>
-            <option value="sold_out">Sold Out</option>
-          </select>
-        </label>
-        <label>Stok baru <input type="number" name="new_stock" min="0" value="0"></label>
-        <label>Catatan <input name="note" placeholder="Produksi pagi / habis cepat"></label>
-        <div class="form-actions" style="grid-column:1/-1;">
-          <input type="hidden" name="type" value="status">
-          <button class="primary-btn" type="submit">Simpan Status</button>
-        </div>
-      </form>
-    </div>
-  </section>
-
-  <section class="card form-card">
-    <div class="card-head"><h3>Pergerakan Stok</h3></div>
-    <div class="card-content">
-      <form method="post" class="form-grid">
-        <input type="hidden" name="_token" value="<?= e(csrf_token()) ?>">
-        <label>Produk
-          <select name="product_id" required>
-            <?php foreach ($products as $product): ?>
-              <option value="<?= e((string) $product['id']) ?>"><?= e($product['name']) ?> - stok <?= e((string) $product['stock']) ?></option>
-            <?php endforeach; ?>
-          </select>
-        </label>
-        <label>Tipe
-          <select name="type">
-            <option value="in">Stok Masuk</option>
-            <option value="out">Stok Keluar</option>
-            <option value="adjustment">Adjustment Tambah</option>
-          </select>
-        </label>
-        <label>Qty <input type="number" name="qty" min="1" value="1" required></label>
-        <label>Catatan <input name="note" placeholder="Produksi pagi / koreksi stok"></label>
-        <div class="form-actions" style="grid-column:1/-1;">
-          <button class="secondary-btn" type="submit">Simpan Pergerakan</button>
-        </div>
-      </form>
-    </div>
-  </section>
-
   <section class="card">
-    <div class="card-head"><h3>Riwayat Stok</h3></div>
+    <form method="post" id="availabilityForm" data-availability-form>
+      <input type="hidden" name="_token" value="<?= e(csrf_token()) ?>">
+      <div class="card-head">
+        <h3>Aturan Request per Produk</h3>
+        <button class="primary-btn" type="submit" data-save-availability disabled>Simpan Perubahan</button>
+      </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Produk</th><th>Tipe</th><th>Qty</th><th>Catatan</th><th>Tanggal</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Produk</th>
+            <th>Kategori</th>
+            <th>Status Web</th>
+            <th>Maksimal Request</th>
+            <th>Keterangan</th>
+          </tr>
+        </thead>
         <tbody>
-          <?php foreach ($movements as $move): ?>
-            <tr><td><?= e($move['product_name']) ?></td><td><?= e($move['type']) ?></td><td><?= e((string) $move['qty']) ?></td><td><?= e($move['note']) ?></td><td><?= e($move['created_at']) ?></td></tr>
+          <?php foreach ($products as $product): ?>
+            <?php $status = $product['stock_status'] ?: 'ready'; ?>
+            <tr>
+              <td class="product-cell">
+                <img src="../<?= e($product['image'] ?: 'assets/almond-croissant.png') ?>" alt="">
+                <span><?= e($product['name']) ?></span>
+              </td>
+              <td><?= e($product['category_name'] ?? '-') ?></td>
+              <td>
+                  <select name="availability[<?= e((string) $product['id']) ?>][stock_status]" data-availability-select>
+                    <?php foreach ($availabilityStates as $value => $state): ?>
+                      <option value="<?= e($value) ?>" <?= $status === $value ? 'selected' : '' ?>><?= e($state['label']) ?></option>
+                    <?php endforeach; ?>
+                  </select>
+              </td>
+              <td>
+                <input type="number" name="availability[<?= e((string) $product['id']) ?>][request_limit]" min="0" value="<?= e((string) (int) $product['stock']) ?>" data-request-limit <?= $status === 'limited' ? '' : 'disabled' ?>>
+              </td>
+              <td>
+                <span class="helper-text" data-availability-hint><?= e($availabilityStates[$status]['hint'] ?? $availabilityStates['ready']['hint']) ?></span>
+              </td>
+            </tr>
           <?php endforeach; ?>
         </tbody>
       </table>
     </div>
+    </form>
   </section>
 </div>
+
+<script>
+  const availabilityHints = {
+    ready: 'Bisa request jumlah bebas',
+    limited: 'Bisa request sampai batas maksimal',
+    sold_out: 'Tampil di katalog, tidak bisa direquest'
+  };
+
+  const form = document.querySelector('[data-availability-form]');
+  const saveButton = document.querySelector('[data-save-availability]');
+  let isDirty = false;
+
+  function setDirty(value) {
+    isDirty = value;
+    if (saveButton) saveButton.disabled = !value;
+  }
+
+  document.querySelectorAll('[data-availability-select]').forEach((select) => {
+    const row = select.closest('tr');
+    const limitInput = row?.querySelector('[data-request-limit]');
+    const hint = row?.querySelector('[data-availability-hint]');
+
+    function syncAvailabilityRow() {
+      const isLimited = select.value === 'limited';
+      if (limitInput) {
+        limitInput.disabled = !isLimited;
+        if (!isLimited) limitInput.value = '0';
+        if (isLimited && Number(limitInput.value || 0) < 1) limitInput.value = '1';
+      }
+      if (hint) hint.textContent = availabilityHints[select.value] || availabilityHints.ready;
+    }
+
+    select.addEventListener('change', syncAvailabilityRow);
+    syncAvailabilityRow();
+  });
+
+  if (form) {
+    form.querySelectorAll('select, input').forEach((field) => {
+      field.addEventListener('change', () => setDirty(true));
+      field.addEventListener('input', () => setDirty(true));
+    });
+
+    form.addEventListener('submit', () => setDirty(false));
+  }
+
+  document.querySelectorAll('a[href]').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      if (!isDirty) return;
+      const ok = window.confirm('Ada perubahan ketersediaan yang belum disimpan. Tinggalkan halaman tanpa menyimpan?');
+      if (!ok) event.preventDefault();
+    });
+  });
+
+  window.addEventListener('beforeunload', (event) => {
+    if (!isDirty) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
+</script>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/_layout.php';

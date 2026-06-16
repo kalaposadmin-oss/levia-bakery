@@ -35,10 +35,10 @@ ob_start();
         </select>
       </label>
       <label>Harga <input type="number" name="price" min="0" value="<?= e((string) (int) $product['price']) ?>" required></label>
-      <label>Stok <input type="number" name="stock" min="0" value="<?= e((string) $product['stock']) ?>" required></label>
-      <label>Status Stok
+      <label>Indikator jumlah <input type="number" name="stock" min="0" value="<?= e((string) $product['stock']) ?>" required></label>
+      <label>Status katalog
         <select name="stock_status">
-          <?php foreach (['ready' => 'Ready', 'limited' => 'Limited', 'sold_out' => 'Habis'] as $value => $label): ?>
+          <?php foreach (['ready' => 'Ready', 'limited' => 'Terbatas', 'sold_out' => 'Habis'] as $value => $label): ?>
             <option value="<?= e($value) ?>" <?= $product['stock_status'] === $value ? 'selected' : '' ?>><?= e($label) ?></option>
           <?php endforeach; ?>
         </select>

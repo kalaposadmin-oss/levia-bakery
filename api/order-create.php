@@ -21,12 +21,12 @@ function store_is_open_now(array $hours): array
     $today = $hours[$dayKey] ?? ['open' => '08:00', 'close' => '20:00', 'active' => 1];
 
     if (empty($today['active'])) {
-        return ['allowed' => false, 'message' => 'Toko sedang libur hari ini. Checkout ditutup sementara.'];
+        return ['allowed' => false, 'message' => 'Toko sedang libur hari ini. Request WhatsApp ditutup sementara.'];
     }
 
     $now = date('H:i');
     if ($now < ($today['open'] ?? '08:00') || $now > ($today['close'] ?? '20:00')) {
-        return ['allowed' => false, 'message' => 'Toko sedang tutup. Checkout hanya tersedia saat jam operasional.'];
+        return ['allowed' => false, 'message' => 'Toko sedang tutup. Request WhatsApp hanya tersedia saat jam operasional.'];
     }
 
     return ['allowed' => true, 'message' => ''];
@@ -93,14 +93,17 @@ try {
         $productId = (int) ($line['product_id'] ?? 0);
         $qty = max(1, (int) ($line['qty'] ?? 1));
 
-        $stmt = $pdo->prepare('SELECT * FROM products WHERE id = ? AND is_active = 1 FOR UPDATE');
+        $stmt = $pdo->prepare('SELECT * FROM products WHERE id = ? AND is_active = 1');
         $stmt->execute([$productId]);
         $product = $stmt->fetch();
         if (!$product) {
             throw new RuntimeException('Produk tidak ditemukan.');
         }
-        if ((int) $product['stock'] < $qty || $product['stock_status'] === 'sold_out') {
-            throw new RuntimeException('Stok ' . $product['name'] . ' tidak cukup.');
+        if (($product['stock_status'] ?? '') === 'sold_out') {
+            throw new RuntimeException($product['name'] . ' sedang habis.');
+        }
+        if (($product['stock_status'] ?? '') === 'limited' && (int) $product['stock'] > 0 && $qty > (int) $product['stock']) {
+            throw new RuntimeException($product['name'] . ' maksimal ' . (int) $product['stock'] . ' pcs per request.');
         }
 
         $lineSubtotal = (float) $product['price'] * $qty;
@@ -125,11 +128,6 @@ try {
         $stmt = $pdo->prepare('INSERT INTO order_items (order_id, product_id, product_name, qty, price, subtotal) VALUES (?, ?, ?, ?, ?, ?)');
         $stmt->execute([$orderId, $product['id'], $product['name'], $qty, $product['price'], $lineSubtotal]);
 
-        $stmt = $pdo->prepare('UPDATE products SET stock = stock - ?, stock_status = CASE WHEN stock - ? <= 0 THEN "sold_out" WHEN stock - ? <= 5 THEN "limited" ELSE stock_status END WHERE id = ?');
-        $stmt->execute([$qty, $qty, $qty, $product['id']]);
-
-        $stmt = $pdo->prepare('INSERT INTO stock_movements (product_id, type, qty, note) VALUES (?, "out", ?, ?)');
-        $stmt->execute([$product['id'], $qty, 'Order ' . $orderCode]);
     }
 
     $pdo->commit();

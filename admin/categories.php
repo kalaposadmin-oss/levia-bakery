@@ -22,7 +22,7 @@ ob_start();
     <div class="form-grid">
       <label>Nama Kategori <input name="name" value="<?= e($edit['name'] ?? '') ?>" required></label>
       <label>Slug <input name="slug" value="<?= e($edit['slug'] ?? '') ?>" placeholder="auto jika kosong"></label>
-      <label>Icon <input name="icon" value="<?= e($edit['icon'] ?? 'bread') ?>" placeholder="bread / croissant / tag"></label>
+      <label>Icon / Inisial <input name="icon" maxlength="12" value="<?= e($edit['icon'] ?? 'bread') ?>" placeholder="S / bread / tag"></label>
       <label>Urutan <input type="number" name="sort_order" min="0" value="<?= e((string) ($edit['sort_order'] ?? 0)) ?>"></label>
     </div>
     <div class="checks"><label><input type="checkbox" name="is_active" value="1" <?= ($edit['is_active'] ?? 1) ? 'checked' : '' ?>> Aktif</label></div>
@@ -33,13 +33,14 @@ ob_start();
 <section class="card">
   <h3>Daftar Kategori</h3>
   <table>
-    <thead><tr><th>Nama</th><th>Slug</th><th>Icon</th><th>Urutan</th><th>Aktif</th><th>Aksi</th></tr></thead>
+    <thead><tr><th>Nama</th><th>Slug</th><th>Icon</th><th>Preview</th><th>Urutan</th><th>Aktif</th><th>Aksi</th></tr></thead>
     <tbody>
       <?php foreach ($categories as $category): ?>
         <tr>
           <td><?= e($category['name']) ?></td>
           <td><?= e($category['slug']) ?></td>
           <td><?= e($category['icon']) ?></td>
+          <td><span class="category-preview-icon"><?= e(strtoupper(substr((string) ($category['icon'] ?: $category['name']), 0, 1))) ?></span></td>
           <td><?= e((string) $category['sort_order']) ?></td>
           <td><?= $category['is_active'] ? 'Ya' : 'Tidak' ?></td>
           <td class="actions">

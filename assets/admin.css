@@ -687,6 +687,19 @@ tbody tr:last-child td {
   font-weight: 700;
 }
 
+.category-preview-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  color: #3a2113;
+  background: #f7df87;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
 .pill,
 .badge,
 .status-pill {

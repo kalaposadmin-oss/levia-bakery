@@ -7,10 +7,10 @@ $currentPage = basename((string) ($_SERVER['PHP_SELF'] ?? ''));
 $navigation = [
     ['file' => 'index.php', 'label' => 'Dashboard', 'icon' => 'dashboard'],
     ['file' => 'categories.php', 'label' => 'Kategori', 'icon' => 'category'],
-    ['file' => 'products.php', 'label' => 'Produk & Stok', 'icon' => 'inventory_2'],
-    ['file' => 'stock.php', 'label' => 'Penyesuaian Stok', 'icon' => 'handyman'],
+    ['file' => 'products.php', 'label' => 'Katalog Produk', 'icon' => 'inventory_2'],
+    ['file' => 'stock.php', 'label' => 'Ketersediaan Harian', 'icon' => 'event_available'],
     ['file' => 'promos.php', 'label' => 'Promo/Banner', 'icon' => 'campaign'],
-    ['file' => 'orders.php', 'label' => 'Pesanan', 'icon' => 'shopping_cart'],
+    ['file' => 'orders.php', 'label' => 'Request WA', 'icon' => 'forum'],
     ['file' => 'settings.php', 'label' => 'Setting Toko', 'icon' => 'settings'],
 ];
 ?>
@@ -19,7 +19,7 @@ $navigation = [
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><?= e($title) ?> - Levia Backoffice</title>
+  <title><?= e($title) ?> - Levia Daily Catalog</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -29,8 +29,8 @@ $navigation = [
 <body class="admin-shell">
   <aside class="sidebar">
     <div class="sidebar-brand">
-      <h1>Levia BO</h1>
-      <p>Backoffice Admin</p>
+      <h1>Levia DC</h1>
+      <p>Daily Catalog</p>
     </div>
 
     <nav class="sidebar-nav">
@@ -45,7 +45,7 @@ $navigation = [
     <div class="sidebar-footer">
       <a href="../index.php" target="_blank" rel="noopener noreferrer" class="nav-link nav-link-secondary">
         <span class="material-symbols-outlined">storefront</span>
-        <span>Lihat Storefront</span>
+        <span>Lihat Catalog</span>
       </a>
       <a href="logout.php" class="nav-link nav-link-logout">
         <span class="material-symbols-outlined">logout</span>

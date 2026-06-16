@@ -9,14 +9,14 @@ const products = (productsRaw.length ? productsRaw : fallbackProducts).map((prod
   name: product.name,
   price: Number(product.price),
   stock: Number(product.stock),
-  stockStatus: product.stock_status,
+  stockStatus: product.stock_status || product.stockStatus || "ready",
   category: product.category_slug || "lainnya",
   tags: [
     product.is_popular === 1 || product.is_popular === "1" ? "popular" : "",
     product.category_slug === "promo" ? "promo" : ""
   ].filter(Boolean),
   image: product.image || "assets/almond-croissant.png",
-  badge: product.stock_status === "limited" ? "Limited" : product.stock <= 0 || product.stockStatus === "sold_out" ? "Sold Out" : "Ready Stock"
+  badge: (product.stock_status || product.stockStatus) === "limited" ? "Terbatas" : (product.stock_status || product.stockStatus) === "sold_out" ? "Habis" : "Ready"
 }));
 
 const rupiah = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
@@ -88,8 +88,9 @@ function showToast(message) {
 }
 
 function productCard(product, compact = false) {
-  const isSoldOut = product.stock <= 0 || product.stockStatus === "sold_out";
-  const badgeClass = product.badge === "Limited" ? "badge limited" : product.badge === "Sold Out" ? "badge sold-out" : "badge ready";
+  const isSoldOut = product.stockStatus === "sold_out";
+  const badgeClass = product.badge === "Terbatas" ? "badge limited" : product.badge === "Habis" ? "badge sold-out" : "badge ready";
+  const buttonLabel = isSoldOut ? "Habis" : compact ? "Tambah" : "+ Tambah";
   return `
     <article class="product-card">
       <div class="product-image">
@@ -99,7 +100,7 @@ function productCard(product, compact = false) {
       <div class="product-body">
         <h3 title="${product.name}">${product.name}</h3>
         <p>${money(product.price)}</p>
-        <button class="add-button" type="button" data-add="${product.id}" ${isSoldOut ? "disabled" : ""}>${isSoldOut ? "Habis" : compact ? "Tambah" : "+ Tambah"}</button>
+        <button class="add-button" type="button" data-add="${product.id}" ${isSoldOut ? "disabled" : ""}>${buttonLabel}</button>
       </div>
     </article>
   `;
@@ -164,6 +165,40 @@ function syncDeliveryAddress() {
   deliveryMapsLink.hidden = true;
 }
 
+function checkoutSummaryText(orderCode, stats, formData) {
+  const option = getDeliveryOption(String(formData.get("delivery_method") || ""));
+  const lines = cartLines()
+    .map((line) => `- ${line.product.name} x${line.qty} = ${money(line.qty * line.product.price)}`)
+    .join("\n");
+
+  return [
+    `Halo ${window.LEVIA_STORE_NAME || "Levia Bakery"}, saya mau tanya ketersediaan menu ini.`,
+    `Kode request: ${orderCode}`,
+    "",
+    `Nama: ${formData.get("customer_name") || "-"}`,
+    `No. WhatsApp: ${formData.get("customer_phone") || "-"}`,
+    `Metode: ${option?.label || formData.get("delivery_method") || "-"}`,
+    `Alamat: ${formData.get("delivery_address") || "-"}`,
+    `Catatan: ${formData.get("note") || "-"}`,
+    "",
+    "Request menu:",
+    lines,
+    "",
+    `Total: ${money(stats.total)}`
+  ].join("\n");
+}
+
+function openAdminWhatsApp(orderCode, stats, formData) {
+  const phone = String(window.LEVIA_ADMIN_WHATSAPP || "").replace(/\D+/g, "");
+  if (!phone) {
+    showToast(`Request ${orderCode} tersimpan. Nomor WhatsApp toko belum diset.`);
+    return;
+  }
+
+  const message = encodeURIComponent(checkoutSummaryText(orderCode, stats, formData));
+  window.location.href = `https://wa.me/${phone}?text=${message}`;
+}
+
 function renderCart() {
   const lines = cartLines();
   const stats = cartStats();
@@ -216,19 +251,21 @@ function setCategory(category) {
 function addToCart(id, qty = 1) {
   const product = getProduct(id);
   if (!product) return;
-  if (product.stock <= 0 || product.stockStatus === "sold_out") {
+  if (product.stockStatus === "sold_out") {
     showToast(`${product.name} sedang habis.`);
     return;
   }
+
   const current = state.cart[id] || 0;
-  if (current + qty > product.stock) {
-    showToast(`Stok ${product.name} tersisa ${product.stock}.`);
+  if (product.stockStatus === "limited" && product.stock > 0 && current + qty > product.stock) {
+    showToast(`${product.name} maksimal ${product.stock} pcs per request.`);
     return;
   }
+
   state.cart[id] = current + qty;
   saveCart();
   renderCart();
-  showToast(`${product.name} ditambahkan.`);
+  showToast(`${product.name} masuk request WA.`);
 }
 
 function changeQty(id, delta) {
@@ -261,7 +298,7 @@ function closeCart() {
 async function checkout() {
   const stats = cartStats();
   if (!stats.items) {
-    showToast("Pilih menu dulu sebelum checkout.");
+    showToast("Pilih menu dulu sebelum lanjut ke WhatsApp.");
     return;
   }
   if (!checkoutForm || !checkoutBtn || !cartPayload) return;
@@ -269,33 +306,34 @@ async function checkout() {
     deliveryMethod.value = 'pickup';
   }
   if (checkoutBtn.dataset.storeClosed === '1') {
-    showToast('Toko sedang libur. Checkout belum bisa diproses.');
+    showToast('Toko sedang libur. Request WhatsApp belum bisa diproses.');
     return;
   }
 
   cartPayload.value = JSON.stringify(cartLines().map((line) => ({ product_id: line.product.id, qty: line.qty })));
   checkoutBtn.disabled = true;
-  checkoutBtn.textContent = "Menyimpan...";
+  checkoutBtn.textContent = "Menyiapkan WA...";
 
   try {
     const payload = new FormData(checkoutForm);
     const response = await fetch(window.LEVIA_ORDER_ENDPOINT, { method: "POST", body: payload });
     const result = await response.json();
     if (!response.ok || !result.ok) {
-      throw new Error(result.message || "Checkout gagal.");
+      throw new Error(result.message || "Request gagal dibuat.");
     }
 
     state.orders.push({ total: stats.total });
+    openAdminWhatsApp(result.order_code, stats, payload);
     state.cart = {};
     saveCart();
     renderCart();
     closeCart();
-    showToast(`Pesanan ${result.order_code} berhasil dibuat.`);
+    showToast(`Request ${result.order_code} dibuat. Lanjut konfirmasi di WhatsApp.`);
   } catch (error) {
     showToast(error.message);
   } finally {
     checkoutBtn.disabled = false;
-    checkoutBtn.textContent = "Buat Pesanan";
+    checkoutBtn.textContent = "Lanjut ke WhatsApp";
   }
 }
 
