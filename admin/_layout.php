@@ -10,6 +10,7 @@ $navigation = [
     ['file' => 'products.php', 'label' => 'Katalog Produk', 'icon' => 'inventory_2'],
     ['file' => 'stock.php', 'label' => 'Ketersediaan Harian', 'icon' => 'event_available'],
     ['file' => 'promos.php', 'label' => 'Promo/Banner', 'icon' => 'campaign'],
+    ['file' => 'blogs.php', 'label' => 'Blog', 'icon' => 'article'],
     ['file' => 'orders.php', 'label' => 'Request WA', 'icon' => 'forum'],
     ['file' => 'settings.php', 'label' => 'Setting Toko', 'icon' => 'settings'],
 ];

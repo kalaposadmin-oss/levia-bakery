@@ -92,6 +92,18 @@ function seedData(PDO $pdo): void
         }
     }
 
+    $stmt = $pdo->prepare('INSERT INTO blogs (title, slug, eyebrow, excerpt, content, image, is_featured, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE title = VALUES(title), eyebrow = VALUES(eyebrow), excerpt = VALUES(excerpt), content = VALUES(content), image = VALUES(image), is_featured = VALUES(is_featured), is_active = VALUES(is_active)');
+    $stmt->execute([
+        'Dedikasi Artisan',
+        'dedikasi-artisan',
+        'Sejak 2018',
+        'Setiap adonan kami uleni dengan tangan, lalu difermentasi perlahan agar rasa dan teksturnya tetap hidup sampai ke meja pelanggan.',
+        'Setiap adonan kami uleni dengan tangan, lalu difermentasi perlahan agar rasa dan teksturnya tetap hidup sampai ke meja pelanggan.',
+        'assets/pairing.png',
+        1,
+        1,
+    ]);
+
     $settings = [
         'store_name' => 'Levia Bakery',
         'store_branch' => 'Gading Serpong',

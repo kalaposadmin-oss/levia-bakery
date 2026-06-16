@@ -77,6 +77,54 @@ function whatsapp_number(?string $value): string
     return $number;
 }
 
+function default_blog_section(): array
+{
+    return [
+        'eyebrow' => 'Sejak 2018',
+        'title' => 'Dedikasi Artisan',
+        'body' => 'Setiap adonan kami uleni dengan tangan, lalu difermentasi perlahan agar rasa dan teksturnya tetap hidup sampai ke meja pelanggan.',
+        'image' => 'assets/pairing.png',
+        'button_label' => 'Lihat katalog',
+    ];
+}
+
+function normalize_blog_section(string $json): array
+{
+    $decoded = json_decode($json, true);
+    if (!is_array($decoded)) {
+        return default_blog_section();
+    }
+
+    $defaults = default_blog_section();
+    return [
+        'eyebrow' => trim((string) ($decoded['eyebrow'] ?? $defaults['eyebrow'])),
+        'title' => trim((string) ($decoded['title'] ?? $defaults['title'])),
+        'body' => trim((string) ($decoded['body'] ?? $defaults['body'])),
+        'image' => trim((string) ($decoded['image'] ?? $defaults['image'])),
+        'button_label' => trim((string) ($decoded['button_label'] ?? $defaults['button_label'])),
+    ];
+}
+
+function homepage_blog_section(): array
+{
+    try {
+        $blog = db()->query('SELECT * FROM blogs WHERE is_active = 1 ORDER BY is_featured DESC, id DESC LIMIT 1')->fetch();
+        if ($blog) {
+            return [
+                'eyebrow' => trim((string) ($blog['eyebrow'] ?: 'Cerita Levia')),
+                'title' => trim((string) $blog['title']),
+                'body' => trim((string) ($blog['excerpt'] ?: $blog['content'] ?: '')),
+                'image' => trim((string) ($blog['image'] ?: 'assets/pairing.png')),
+                'button_label' => 'Lihat katalog',
+            ];
+        }
+    } catch (Throwable $e) {
+        return normalize_blog_section((string) setting('blog_section_json', ''));
+    }
+
+    return normalize_blog_section((string) setting('blog_section_json', ''));
+}
+
 $hero = json_decode((string) setting('hero_promo_json', ''), true);
 if (!is_array($hero)) {
     $hero = $promos[0] ?? ['title' => 'Promo Special', 'subtitle' => 'Diskon 20% khusus croissant pagi.', 'image' => 'assets/hero-promo.png'];
@@ -93,15 +141,19 @@ $googleMapsUrl = trim((string) setting('google_maps_url', ''));
 $whatsApp = trim((string) setting('whatsapp', ''));
 $whatsAppNumber = whatsapp_number($whatsApp);
 $storeHours = normalize_hours_schedule((string) setting('store_hours_json', ''));
+$showHeroPromo = homepage_section_enabled('show_hero_promo');
 $showBestSellers = homepage_section_enabled('show_best_sellers');
 $showPromos = homepage_section_enabled('show_promos');
 $showTodayCatalog = homepage_section_enabled('show_today_catalog');
+$showStoreCard = homepage_section_enabled('show_store_card');
+$showBlogSection = homepage_section_enabled('show_blog_section');
 $storeStatus = current_store_status($storeHours);
 $storeCanCheckout = !empty($storeStatus['is_open']) && empty($storeStatus['is_holiday']);
 $todayKey = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][(int) date('w')] ?? 'mon';
 $todayHours = $storeHours[$todayKey] ?? ['open' => '08:00', 'close' => '20:00', 'active' => 1];
 $todayHoursText = !empty($todayHours['active']) ? (($todayHours['open'] ?? '08:00') . ' - ' . ($todayHours['close'] ?? '20:00')) : 'Tutup';
 $deliveryOptions = json_decode((string) setting('delivery_options_json', ''), true);
+$blogSection = homepage_blog_section();
 if (!is_array($deliveryOptions) || !$deliveryOptions) {
     $deliveryOptions = [
         ['value' => 'pickup', 'label' => 'Ambil Sendiri', 'needs_address' => false, 'maps_url' => ''],
@@ -173,7 +225,10 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
           <span class="quick-action-icon">◫</span>
           <span>Chat WhatsApp</span>
         </a>
-      </section>      <section class="promo-hero-card">
+      </section>
+
+      <?php if ($showHeroPromo): ?>
+      <section class="promo-hero-card">
         <img src="<?= e($hero['image']) ?>" alt="<?= e($hero['title']) ?>">
         <div class="promo-hero-copy">
           <h1><?= e($hero['title']) ?></h1>
@@ -181,6 +236,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
           <div class="pager"><span></span><i></i><i></i></div>
         </div>
       </section>
+      <?php endif; ?>
 
       <section class="category-grid">
         <?php foreach ($categoryChips as $chip): ?>
@@ -252,25 +308,29 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
       </section>
       <?php endif; ?>
 
+      <?php if ($showStoreCard): ?>
       <section class="store-card">
         <div>
-          <h3><?= e($storeName) ?> - <?= e($branch) ?></h3>
+          <h3><?= e($branch ?: $storeName) ?></h3>
           <p><?= e($storeStatus['detail']) ?> • Jam hari ini <?= e($todayHoursText) ?></p>
         </div>
         <button type="button" id="storeDetailBtn">Detail</button>
       </section>
+      <?php endif; ?>
 
+      <?php if ($showBlogSection): ?>
       <section class="story-section blog-section">
         <article class="blog-feature">
-          <img src="assets/pairing.png" alt="Proses artisan bakery">
+          <img src="<?= e($blogSection['image']) ?>" alt="<?= e($blogSection['title']) ?>">
           <div class="blog-copy">
-            <small>Sejak 2018</small>
-            <h2>Dedikasi Artisan</h2>
-            <p>Setiap adonan kami uleni dengan tangan, lalu difermentasi perlahan agar rasa dan teksturnya tetap hidup sampai ke meja pelanggan.</p>
-            <a href="#stockList">Lihat katalog <span>?</span></a>
+            <small><?= e($blogSection['eyebrow']) ?></small>
+            <h2><?= e($blogSection['title']) ?></h2>
+            <p><?= e($blogSection['body']) ?></p>
+            <a href="#stockList"><?= e($blogSection['button_label']) ?> <span>?</span></a>
           </div>
         </article>
       </section>
+      <?php endif; ?>
 
     </main>
   </div>

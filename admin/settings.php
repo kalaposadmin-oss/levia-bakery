@@ -97,6 +97,34 @@ function normalize_hero_promo($value): array
     ];
 }
 
+function default_blog_section(): array
+{
+    return [
+        'eyebrow' => 'Sejak 2018',
+        'title' => 'Dedikasi Artisan',
+        'body' => 'Setiap adonan kami uleni dengan tangan, lalu difermentasi perlahan agar rasa dan teksturnya tetap hidup sampai ke meja pelanggan.',
+        'image' => 'assets/pairing.png',
+        'button_label' => 'Lihat katalog',
+    ];
+}
+
+function normalize_blog_section($value): array
+{
+    $decoded = json_decode((string) $value, true);
+    if (!is_array($decoded)) {
+        return default_blog_section();
+    }
+
+    $defaults = default_blog_section();
+    return [
+        'eyebrow' => trim((string) ($decoded['eyebrow'] ?? $defaults['eyebrow'])),
+        'title' => trim((string) ($decoded['title'] ?? $defaults['title'])),
+        'body' => trim((string) ($decoded['body'] ?? $defaults['body'])),
+        'image' => trim((string) ($decoded['image'] ?? $defaults['image'])),
+        'button_label' => trim((string) ($decoded['button_label'] ?? $defaults['button_label'])),
+    ];
+}
+
 function homepage_section_enabled(string $key): bool
 {
     return setting($key, '1') !== '0';
@@ -104,12 +132,22 @@ function homepage_section_enabled(string $key): bool
 
 function hero_image_path(?string $fallback = null): ?string
 {
-    if (empty($_FILES['hero_image_file']['name']) || ($_FILES['hero_image_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+    return uploaded_image_path('hero_image_file', 'hero', $fallback);
+}
+
+function blog_image_path(?string $fallback = null): ?string
+{
+    return uploaded_image_path('blog_image_file', 'blog', $fallback);
+}
+
+function uploaded_image_path(string $field, string $prefix, ?string $fallback = null): ?string
+{
+    if (empty($_FILES[$field]['name']) || ($_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
         return $fallback;
     }
 
     $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-    $mime = mime_content_type($_FILES['hero_image_file']['tmp_name']);
+    $mime = mime_content_type($_FILES[$field]['tmp_name']);
     if (!isset($allowed[$mime])) {
         return $fallback;
     }
@@ -119,8 +157,8 @@ function hero_image_path(?string $fallback = null): ?string
         mkdir($dir, 0775, true);
     }
 
-    $name = 'hero-' . date('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
-    move_uploaded_file($_FILES['hero_image_file']['tmp_name'], $dir . '/' . $name);
+    $name = $prefix . '-' . date('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
+    move_uploaded_file($_FILES[$field]['tmp_name'], $dir . '/' . $name);
 
     return 'uploads/' . $name;
 }
@@ -134,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         set_setting($key, trim((string) ($_POST[$key] ?? '')));
     }
 
-    foreach (['show_best_sellers', 'show_promos', 'show_today_catalog'] as $key) {
+    foreach (['show_hero_promo', 'show_best_sellers', 'show_promos', 'show_today_catalog', 'show_store_card', 'show_blog_section'] as $key) {
         set_setting($key, isset($_POST[$key]) ? '1' : '0');
     }
 
@@ -187,6 +225,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
     set_setting('hero_promo_json', json_encode($heroPromo, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 
+    $existingBlog = normalize_blog_section(setting('blog_section_json', ''));
+    $blogImage = trim((string) ($_POST['blog_image'] ?? ($existingBlog['image'] ?? 'assets/pairing.png')));
+    $uploadedBlogImage = blog_image_path($blogImage);
+    $blogSection = [
+        'eyebrow' => trim((string) ($_POST['blog_eyebrow'] ?? 'Sejak 2018')),
+        'title' => trim((string) ($_POST['blog_title'] ?? 'Dedikasi Artisan')),
+        'body' => trim((string) ($_POST['blog_body'] ?? '')),
+        'image' => $uploadedBlogImage ?: $blogImage,
+        'button_label' => trim((string) ($_POST['blog_button_label'] ?? 'Lihat katalog')),
+    ];
+    set_setting('blog_section_json', json_encode($blogSection, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+
     $_SESSION['flash'] = 'Setting toko berhasil disimpan.';
     redirect('admin/settings.php');
 }
@@ -196,6 +246,7 @@ $hours = normalize_hours(setting('store_hours_json', ''));
 if (!$hours) { $hours = default_hours(); }
 $hours = array_merge(default_hours(), $hours);
 $heroPromo = normalize_hero_promo(setting('hero_promo_json', ''));
+$blogSection = normalize_blog_section(setting('blog_section_json', ''));
 
 $title = 'Setting Toko';
 ob_start();
@@ -251,9 +302,12 @@ ob_start();
         <div class="card-head"><h3>Tampilan Homepage</h3></div>
         <div class="card-content schedule-list">
           <?php $homepageSections = [
+            ['key' => 'show_hero_promo', 'label' => 'Banner Promo Utama'],
             ['key' => 'show_best_sellers', 'label' => 'Paling Laris'],
             ['key' => 'show_promos', 'label' => 'Promo Spesial'],
             ['key' => 'show_today_catalog', 'label' => 'Katalog Hari Ini'],
+            ['key' => 'show_store_card', 'label' => 'Kartu Info Toko'],
+            ['key' => 'show_blog_section', 'label' => 'Blog / Cerita'],
           ]; ?>
           <?php foreach ($homepageSections as $section): $isEnabled = homepage_section_enabled($section['key']); ?>
             <div class="schedule-row">
@@ -290,6 +344,23 @@ ob_start();
               </label>
             </div>
           <?php endforeach; ?>
+        </div>
+      </section>
+
+      <section class="card form-card">
+        <div class="card-head"><h3>Blog / Cerita Homepage</h3></div>
+        <div class="card-content">
+          <div class="form-grid">
+            <label>Label kecil <input name="blog_eyebrow" value="<?= e($blogSection['eyebrow']) ?>" placeholder="Sejak 2018"></label>
+            <label>Judul <input name="blog_title" value="<?= e($blogSection['title']) ?>" placeholder="Dedikasi Artisan"></label>
+            <label>Gambar <input name="blog_image" value="<?= e($blogSection['image']) ?>" placeholder="assets/pairing.png"></label>
+            <label>Upload gambar <input type="file" name="blog_image_file" accept="image/png,image/jpeg,image/webp" id="blogImageFile"></label>
+            <label>Teks tombol <input name="blog_button_label" value="<?= e($blogSection['button_label']) ?>" placeholder="Lihat katalog"></label>
+          </div>
+          <label style="margin-top:18px;">Isi cerita<textarea name="blog_body" rows="5"><?= e($blogSection['body']) ?></textarea></label>
+          <div class="hero-preview" style="margin-top:18px;">
+            <img id="blogPreview" src="<?= e($blogSection['image']) ?>" alt="Preview blog" style="width:100%; aspect-ratio:1.72; object-fit:cover; border-radius:16px; border:1px solid rgba(75,53,33,.12);">
+          </div>
         </div>
       </section>
     </section>
@@ -364,6 +435,18 @@ ob_start();
       if (!file) return;
       const reader = new FileReader();
       reader.onload = () => { heroPreview.src = String(reader.result || ''); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  const blogImageFile = document.getElementById('blogImageFile');
+  const blogPreview = document.getElementById('blogPreview');
+  if (blogImageFile && blogPreview) {
+    blogImageFile.addEventListener('change', () => {
+      const file = blogImageFile.files && blogImageFile.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => { blogPreview.src = String(reader.result || ''); };
       reader.readAsDataURL(file);
     });
   }
