@@ -594,6 +594,35 @@ textarea:focus {
   margin: 0;
 }
 
+.ingredient-builder {
+  display: grid;
+  gap: 12px;
+}
+
+.ingredient-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ingredient-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ingredient-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.ingredient-row .ghost-btn {
+  min-width: 90px;
+}
+
 .table-wrap {
   width: 100%;
   overflow-x: auto;

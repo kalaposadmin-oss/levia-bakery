@@ -54,6 +54,11 @@ function current_store_status(array $hours): array
         : ['label' => 'Sedang tutup', 'detail' => 'Buka jam ' . $openTime . ' sampai ' . $closeTime, 'is_open' => false, 'is_holiday' => false, 'open_time' => $openTime, 'close_time' => $closeTime];
 }
 
+function homepage_section_enabled(string $key): bool
+{
+    return setting($key, '1') !== '0';
+}
+
 $hero = json_decode((string) setting('hero_promo_json', ''), true);
 if (!is_array($hero)) {
     $hero = $promos[0] ?? ['title' => 'Promo Special', 'subtitle' => 'Diskon 20% khusus croissant pagi.', 'image' => 'assets/hero-promo.png'];
@@ -69,6 +74,9 @@ $storeAddress = setting('store_address', '');
 $googleMapsUrl = trim((string) setting('google_maps_url', ''));
 $whatsApp = trim((string) setting('whatsapp', ''));
 $storeHours = normalize_hours_schedule((string) setting('store_hours_json', ''));
+$showBestSellers = homepage_section_enabled('show_best_sellers');
+$showPromos = homepage_section_enabled('show_promos');
+$showTodayCatalog = homepage_section_enabled('show_today_catalog');
 $storeStatus = current_store_status($storeHours);
 $storeCanCheckout = !empty($storeStatus['is_open']) && empty($storeStatus['is_holiday']);
 $todayKey = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][(int) date('w')] ?? 'mon';
@@ -88,6 +96,10 @@ $categoryChips = array_map(fn($category) => [
     'label' => (string) $category['name'],
     'icon' => strtoupper(substr((string) ($category['icon'] ?: $category['name']), 0, 1)),
 ], $categories);
+
+if (!$showPromos) {
+    $categoryChips = array_values(array_filter($categoryChips, fn($chip) => ($chip['slug'] ?? '') !== 'promo'));
+}
 
 array_unshift($categoryChips, ['slug' => 'popular', 'label' => 'Terlaris', 'icon' => '*']);
 $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
@@ -160,6 +172,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
         <?php endforeach; ?>
       </section>
 
+      <?php if ($showBestSellers): ?>
       <section class="section-block">
         <div class="section-title"><h2>Paling Laris</h2><button type="button" data-category-jump="popular">Lihat Semua</button></div>
         <div class="horizontal-list" id="bestSellerList">
@@ -180,7 +193,9 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
           <?php endforeach; ?>
         </div>
       </section>
+      <?php endif; ?>
 
+      <?php if ($showPromos): ?>
       <section class="section-block">
         <div class="section-title"><h2>Promo Spesial</h2><button type="button" data-category-jump="promo">Lihat Semua</button></div>
         <div class="promo-strip">
@@ -193,7 +208,9 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
           <?php endforeach; ?>
         </div>
       </section>
+      <?php endif; ?>
 
+      <?php if ($showTodayCatalog): ?>
       <section class="section-block">
         <div class="section-title"><h2>Katalog Hari Ini</h2><button type="button" data-category-jump="all">Semua</button></div>
         <p class="section-note">Ketersediaan final dikonfirmasi lewat WhatsApp</p>
@@ -214,6 +231,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
           <?php endforeach; ?>
         </div>
       </section>
+      <?php endif; ?>
 
       <section class="store-card">
         <div>
@@ -272,6 +290,35 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
       <?php endif; ?>
       <div class="checkout-summary"><span>Total</span><strong id="cartTotal">Rp 0</strong></div>
       <button class="checkout-button" type="button" id="checkoutBtn" data-store-closed="<?= $storeCanCheckout ? '0' : '1' ?>" aria-disabled="<?= $storeCanCheckout ? 'false' : 'true' ?>" <?= $storeCanCheckout ? '' : 'disabled' ?>><?= $storeCanCheckout ? 'Lanjut ke WhatsApp' : 'Toko Libur' ?></button>
+    </section>
+  </div>
+
+  <div class="product-modal" id="productModal" aria-hidden="true">
+    <button class="product-modal-backdrop" type="button" data-close-product-detail aria-label="Tutup detail produk"></button>
+    <section class="product-detail-panel" role="dialog" aria-modal="true" aria-labelledby="productDetailName">
+      <button class="product-detail-close" type="button" data-close-product-detail aria-label="Tutup detail produk">×</button>
+      <img class="product-detail-image" id="productDetailImage" src="" alt="">
+      <div class="product-detail-body">
+        <div class="product-detail-title-row">
+          <div>
+            <small id="productDetailCategory"></small>
+            <h2 id="productDetailName"></h2>
+          </div>
+          <span class="badge ready" id="productDetailBadge"></span>
+        </div>
+        <strong class="product-detail-price" id="productDetailPrice"></strong>
+        <p class="product-detail-description" id="productDetailDescription"></p>
+        <dl class="product-detail-meta">
+          <div><dt>Isi / berat</dt><dd id="productDetailPackage"></dd></div>
+          <div><dt>Stok hari ini</dt><dd id="productDetailStock"></dd></div>
+          <div><dt>Masa simpan</dt><dd id="productDetailShelfLife"></dd></div>
+        </dl>
+        <div class="product-detail-ingredients">
+          <h3>Ingredient</h3>
+          <ul id="productDetailIngredients"></ul>
+        </div>
+        <button class="checkout-button" type="button" id="productDetailAddBtn">Tambahkan ke Keranjang</button>
+      </div>
     </section>
   </div>
 

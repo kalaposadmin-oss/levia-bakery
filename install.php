@@ -60,16 +60,16 @@ function seedData(PDO $pdo): void
     }
 
     $products = [
-        ['Almond Croissant', 'almond-croissant', 'Pastry lapis dengan almond cream.', 28000, 24, 'ready', 'assets/almond-croissant.png', 1, $categoryIds['croissant']],
-        ['Cinnamon Roll', 'cinnamon-roll', 'Roti gulung kayu manis dan glaze lembut.', 22000, 18, 'ready', 'assets/cinnamon-roll.png', 1, $categoryIds['roti-manis']],
-        ['Seeded Bread', 'seeded-bread', 'Roti biji-bijian untuk sarapan.', 15000, 12, 'ready', 'assets/seeded-bread.png', 1, $categoryIds['roti-tawar']],
-        ['Classic Sourdough', 'classic-sourdough', 'Sourdough fermentasi lambat.', 45000, 6, 'limited', 'assets/sourdough.png', 1, $categoryIds['roti-tawar']],
-        ['Kopi Latte', 'kopi-latte', 'Espresso dan susu creamy.', 24000, 30, 'ready', 'assets/pairing.png', 0, $categoryIds['kopi']],
-        ['Bundle Sarapan', 'bundle-sarapan', 'Paket kopi dan roti pagi.', 35000, 10, 'ready', 'assets/bundle-promo.png', 0, $categoryIds['promo']],
+        ['Almond Croissant', 'almond-croissant', 'Pastry lapis dengan almond cream.', "Tepung terigu\nbutter\nalmond\ntelur\ngula", '1 pcs / 85 gram', '1 hari suhu ruang', 28000, 24, 'ready', 'assets/almond-croissant.png', 1, $categoryIds['croissant']],
+        ['Cinnamon Roll', 'cinnamon-roll', 'Roti gulung kayu manis dan glaze lembut.', "Tepung terigu\nkayu manis\nbutter\ngula\nsusu", '1 pcs / 95 gram', '2 hari suhu ruang', 22000, 18, 'ready', 'assets/cinnamon-roll.png', 1, $categoryIds['roti-manis']],
+        ['Seeded Bread', 'seeded-bread', 'Roti biji-bijian untuk sarapan.', "Tepung gandum\nbiji bunga matahari\nwijen\nragi", '1 loaf / 450 gram', '3 hari suhu ruang', 15000, 12, 'ready', 'assets/seeded-bread.png', 1, $categoryIds['roti-tawar']],
+        ['Classic Sourdough', 'classic-sourdough', 'Sourdough fermentasi lambat.', "Tepung gandum\nragi alami\nair\ngaram", '1 loaf / 500 gram', '3 hari suhu ruang', 45000, 6, 'limited', 'assets/sourdough.png', 1, $categoryIds['roti-tawar']],
+        ['Kopi Latte', 'kopi-latte', 'Espresso dan susu creamy.', "Espresso\nsusu\ngula cair opsional", '1 cup / 250 ml', 'Minum segera', 24000, 30, 'ready', 'assets/pairing.png', 0, $categoryIds['kopi']],
+        ['Bundle Sarapan', 'bundle-sarapan', 'Paket kopi dan roti pagi.', "Roti pilihan\nkopi\nsusu\nbutter", '1 paket', 'Minum segera, roti 1 hari', 35000, 10, 'ready', 'assets/bundle-promo.png', 0, $categoryIds['promo']],
     ];
 
     foreach ($products as $product) {
-        $stmt = $pdo->prepare('INSERT INTO products (name, slug, description, price, stock, stock_status, image, is_popular, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE price = VALUES(price), stock = VALUES(stock), image = VALUES(image)');
+        $stmt = $pdo->prepare('INSERT INTO products (name, slug, description, ingredients, package_info, shelf_life, price, stock, stock_status, image, is_popular, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE price = VALUES(price), stock = VALUES(stock), image = VALUES(image), ingredients = VALUES(ingredients), package_info = VALUES(package_info), shelf_life = VALUES(shelf_life)');
         $stmt->execute($product);
     }
 

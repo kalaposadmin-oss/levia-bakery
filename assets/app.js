@@ -1,8 +1,8 @@
 const productsRaw = Array.isArray(window.LEVIA_PRODUCTS) ? window.LEVIA_PRODUCTS : [];
 const fallbackProducts = [
-  { id: 'fallback-1', name: 'Almond Croissant', price: 28000, stock: 24, stockStatus: 'ready', category: 'croissant', tags: ['popular'], image: 'assets/almond-croissant.png', badge: 'Ready Stock' },
-  { id: 'fallback-2', name: 'Cinnamon Roll', price: 22000, stock: 18, stockStatus: 'ready', category: 'roti-manis', tags: ['popular'], image: 'assets/cinnamon-roll.png', badge: 'Ready Stock' },
-  { id: 'fallback-3', name: 'Seeded Bread', price: 15000, stock: 12, stockStatus: 'ready', category: 'roti-tawar', tags: [], image: 'assets/seeded-bread.png', badge: 'Ready Stock' }
+  { id: 'fallback-1', name: 'Almond Croissant', description: 'Pastry lapis dengan almond cream.', ingredients: 'Tepung terigu, butter, almond, telur, gula', package_info: '1 pcs / 85 gram', shelf_life: '1 hari suhu ruang', price: 28000, stock: 24, stockStatus: 'ready', category: 'croissant', tags: ['popular'], image: 'assets/almond-croissant.png', badge: 'Ready Stock' },
+  { id: 'fallback-2', name: 'Cinnamon Roll', description: 'Roti gulung kayu manis dan glaze lembut.', ingredients: 'Tepung terigu, kayu manis, butter, gula, susu', package_info: '1 pcs / 95 gram', shelf_life: '2 hari suhu ruang', price: 22000, stock: 18, stockStatus: 'ready', category: 'roti-manis', tags: ['popular'], image: 'assets/cinnamon-roll.png', badge: 'Ready Stock' },
+  { id: 'fallback-3', name: 'Seeded Bread', description: 'Roti biji-bijian untuk sarapan.', ingredients: 'Tepung gandum, biji bunga matahari, wijen, ragi', package_info: '1 loaf / 450 gram', shelf_life: '3 hari suhu ruang', price: 15000, stock: 12, stockStatus: 'ready', category: 'roti-tawar', tags: [], image: 'assets/seeded-bread.png', badge: 'Ready Stock' }
 ];
 const products = (productsRaw.length ? productsRaw : fallbackProducts).map((product) => ({
   id: String(product.id),
@@ -10,7 +10,12 @@ const products = (productsRaw.length ? productsRaw : fallbackProducts).map((prod
   price: Number(product.price),
   stock: Number(product.stock),
   stockStatus: product.stock_status || product.stockStatus || "ready",
+  description: product.description || "",
+  ingredients: product.ingredients || "",
+  package_info: product.package_info || product.packageInfo || "",
+  shelf_life: product.shelf_life || product.shelfLife || "",
   category: product.category_slug || "lainnya",
+  categoryName: product.category_name || product.categoryName || "",
   tags: [
     product.is_popular === 1 || product.is_popular === "1" ? "popular" : "",
     product.category_slug === "promo" ? "promo" : ""
@@ -48,9 +53,30 @@ const cartPayload = document.querySelector("#cartPayload");
 const deliveryMethod = document.querySelector("#deliveryMethod");
 const deliveryAddress = document.querySelector("#deliveryAddress");
 const deliveryMapsLink = document.querySelector("#deliveryMapsLink");
+const productModal = document.querySelector("#productModal");
+const productDetailImage = document.querySelector("#productDetailImage");
+const productDetailCategory = document.querySelector("#productDetailCategory");
+const productDetailName = document.querySelector("#productDetailName");
+const productDetailBadge = document.querySelector("#productDetailBadge");
+const productDetailPrice = document.querySelector("#productDetailPrice");
+const productDetailDescription = document.querySelector("#productDetailDescription");
+const productDetailIngredients = document.querySelector("#productDetailIngredients");
+const productDetailPackage = document.querySelector("#productDetailPackage");
+const productDetailStock = document.querySelector("#productDetailStock");
+const productDetailShelfLife = document.querySelector("#productDetailShelfLife");
+const productDetailAddBtn = document.querySelector("#productDetailAddBtn");
 
 function money(value) {
   return rupiah.format(value).replace(/\s/g, " ");
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"]/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;"
+  }[char]));
 }
 
 function saveCart() {
@@ -92,18 +118,64 @@ function productCard(product, compact = false) {
   const badgeClass = product.badge === "Terbatas" ? "badge limited" : product.badge === "Habis" ? "badge sold-out" : "badge ready";
   const buttonLabel = isSoldOut ? "Habis" : compact ? "Tambah" : "+ Tambah";
   return `
-    <article class="product-card">
+    <article class="product-card" data-product-id="${escapeHtml(product.id)}" tabindex="0" role="button" aria-label="Lihat detail ${escapeHtml(product.name)}">
       <div class="product-image">
-        <img src="${product.image}" alt="${product.name}">
-        <span class="${badgeClass}">${product.badge}</span>
+        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">
+        <span class="${badgeClass}">${escapeHtml(product.badge)}</span>
       </div>
       <div class="product-body">
-        <h3 title="${product.name}">${product.name}</h3>
+        <h3 title="${escapeHtml(product.name)}">${escapeHtml(product.name)}</h3>
         <p>${money(product.price)}</p>
         <button class="add-button" type="button" data-add="${product.id}" ${isSoldOut ? "disabled" : ""}>${buttonLabel}</button>
       </div>
     </article>
   `;
+}
+
+function stockText(product) {
+  if (product.stockStatus === "sold_out") return "Habis";
+  if (product.stockStatus === "limited") return product.stock > 0 ? `Terbatas, ${product.stock} pcs` : "Terbatas";
+  return product.stock > 0 ? `Ready, ${product.stock} pcs` : "Ready stock";
+}
+
+function ingredientItems(value) {
+  return String(value || "")
+    .split(/\r?\n|\s*,\s*/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function openProductDetail(id) {
+  const product = getProduct(id);
+  if (!product || !productModal) return;
+
+  productDetailImage.src = product.image;
+  productDetailImage.alt = product.name;
+  productDetailCategory.textContent = product.categoryName || product.category || "Produk";
+  productDetailName.textContent = product.name;
+  productDetailBadge.textContent = product.badge;
+  productDetailBadge.className = product.badge === "Terbatas" ? "badge limited" : product.badge === "Habis" ? "badge sold-out" : "badge ready";
+  productDetailPrice.textContent = money(product.price);
+  productDetailDescription.textContent = product.description || "Deskripsi produk belum diisi.";
+  const ingredients = ingredientItems(product.ingredients);
+  productDetailIngredients.innerHTML = ingredients.length
+    ? ingredients.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
+    : "<li>Belum diisi</li>";
+  productDetailPackage.textContent = product.package_info || product.packageInfo || "Belum diisi";
+  productDetailStock.textContent = stockText(product);
+  productDetailShelfLife.textContent = product.shelf_life || product.shelfLife || "Belum diisi";
+  productDetailAddBtn.dataset.add = product.id;
+  productDetailAddBtn.disabled = product.stockStatus === "sold_out";
+  productDetailAddBtn.textContent = product.stockStatus === "sold_out" ? "Stok Habis" : "Tambahkan ke Keranjang";
+
+  productModal.classList.add("is-open");
+  productModal.setAttribute("aria-hidden", "false");
+}
+
+function closeProductDetail() {
+  if (!productModal) return;
+  productModal.classList.remove("is-open");
+  productModal.setAttribute("aria-hidden", "true");
 }
 
 function filteredProducts() {
@@ -348,6 +420,7 @@ document.addEventListener("click", (event) => {
   if (target.dataset.categoryJump) setCategory(target.dataset.categoryJump);
   if (target.dataset.openCart !== undefined) openCart();
   if (target.dataset.closeCart !== undefined) closeCart();
+  if (target.dataset.closeProductDetail !== undefined) closeProductDetail();
 
   if (target.dataset.promo) {
     setCategory("promo");
@@ -357,6 +430,20 @@ document.addEventListener("click", (event) => {
   if (target.id === "storeDetailBtn") {
     showToast("Cabang buka sesuai jam operasional toko.");
   }
+});
+
+document.addEventListener("click", (event) => {
+  const card = event.target.closest(".product-card[data-product-id]");
+  if (!card || event.target.closest("button, a, input, textarea, select")) return;
+  openProductDetail(card.dataset.productId);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const card = event.target.closest(".product-card[data-product-id]");
+  if (!card) return;
+  event.preventDefault();
+  openProductDetail(card.dataset.productId);
 });
 
 if (searchInput) {
@@ -378,6 +465,7 @@ if (checkoutBtn) {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeCart();
+    closeProductDetail();
   }
 });
 

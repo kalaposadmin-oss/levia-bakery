@@ -9,6 +9,14 @@ $name = trim((string) ($_POST['name'] ?? ''));
 $allowedStockStatuses = ['ready', 'limited', 'sold_out'];
 $stockStatus = (string) ($_POST['stock_status'] ?? 'ready');
 
+function normalize_ingredients($value): string
+{
+    $items = is_array($value) ? $value : preg_split('/\r?\n|\s*,\s*/', (string) $value);
+    $items = array_values(array_filter(array_map(fn($item) => trim((string) $item), $items ?: []), fn($item) => $item !== ''));
+
+    return implode("\n", $items);
+}
+
 if ($name === '') {
     $_SESSION['flash'] = 'Nama produk wajib diisi.';
     redirect($id ? 'admin/product-form.php?id=' . $id : 'admin/product-form.php');
@@ -37,6 +45,9 @@ $data = [
     $name,
     $slug,
     trim((string) ($_POST['description'] ?? '')),
+    normalize_ingredients($_POST['ingredients'] ?? []),
+    trim((string) ($_POST['package_info'] ?? '')),
+    trim((string) ($_POST['shelf_life'] ?? '')),
     max(0, (float) ($_POST['price'] ?? 0)),
     max(0, (int) ($_POST['stock'] ?? 0)),
     $stockStatus,
@@ -47,9 +58,9 @@ $data = [
 
 if ($id) {
     $data[] = $id;
-    db()->prepare('UPDATE products SET category_id=?, name=?, slug=?, description=?, price=?, stock=?, stock_status=?, image=?, is_popular=?, is_active=? WHERE id=?')->execute($data);
+    db()->prepare('UPDATE products SET category_id=?, name=?, slug=?, description=?, ingredients=?, package_info=?, shelf_life=?, price=?, stock=?, stock_status=?, image=?, is_popular=?, is_active=? WHERE id=?')->execute($data);
 } else {
-    db()->prepare('INSERT INTO products (category_id, name, slug, description, price, stock, stock_status, image, is_popular, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute($data);
+    db()->prepare('INSERT INTO products (category_id, name, slug, description, ingredients, package_info, shelf_life, price, stock, stock_status, image, is_popular, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute($data);
 }
 
 $_SESSION['flash'] = 'Produk berhasil disimpan.';

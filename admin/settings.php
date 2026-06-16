@@ -97,6 +97,11 @@ function normalize_hero_promo($value): array
     ];
 }
 
+function homepage_section_enabled(string $key): bool
+{
+    return setting($key, '1') !== '0';
+}
+
 function hero_image_path(?string $fallback = null): ?string
 {
     if (empty($_FILES['hero_image_file']['name']) || ($_FILES['hero_image_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
@@ -127,6 +132,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     foreach ($settingKeys as $key) {
         set_setting($key, trim((string) ($_POST[$key] ?? '')));
+    }
+
+    foreach (['show_best_sellers', 'show_promos', 'show_today_catalog'] as $key) {
+        set_setting($key, isset($_POST[$key]) ? '1' : '0');
     }
 
     $hours = [];
@@ -235,6 +244,29 @@ ob_start();
             <label>Link Google Maps <input name="google_maps_url" value="<?= e(setting('google_maps_url', '')) ?>" placeholder="https://maps.google.com/..."></label>
           </div>
           <label style="margin-top:18px;">Alamat utama toko<textarea name="store_address" rows="4"><?= e(setting('store_address', '')) ?></textarea></label>
+        </div>
+      </section>
+
+      <section class="card form-card">
+        <div class="card-head"><h3>Tampilan Homepage</h3></div>
+        <div class="card-content schedule-list">
+          <?php $homepageSections = [
+            ['key' => 'show_best_sellers', 'label' => 'Paling Laris'],
+            ['key' => 'show_promos', 'label' => 'Promo Spesial'],
+            ['key' => 'show_today_catalog', 'label' => 'Katalog Hari Ini'],
+          ]; ?>
+          <?php foreach ($homepageSections as $section): $isEnabled = homepage_section_enabled($section['key']); ?>
+            <div class="schedule-row">
+              <div class="schedule-day">
+                <strong><?= e($section['label']) ?></strong>
+              </div>
+              <label class="switch" title="<?= $isEnabled ? 'Tampil' : 'Disembunyikan' ?>">
+                <input class="toggle-input" type="checkbox" name="<?= e($section['key']) ?>" <?= $isEnabled ? 'checked' : '' ?>>
+                <span class="switch-track"></span>
+                <span class="switch-label <?= $isEnabled ? 'is-on' : 'is-off' ?>"><?= $isEnabled ? 'ON' : 'OFF' ?></span>
+              </label>
+            </div>
+          <?php endforeach; ?>
         </div>
       </section>
 
