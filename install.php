@@ -27,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->exec('CREATE DATABASE IF NOT EXISTS `' . str_replace('`', '', $db['database']) . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
         $pdo->exec('USE `' . str_replace('`', '', $db['database']) . '`');
         $pdo->exec(file_get_contents(__DIR__ . '/database.sql'));
+        ensurePerformanceIndexes($pdo, (string) $db['database']);
 
         $hash = password_hash($adminPassword, PASSWORD_DEFAULT);
         $stmt = $pdo->prepare('INSERT INTO admins (name, email, password_hash) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), password_hash = VALUES(password_hash)');
@@ -36,6 +37,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'Install berhasil. Silakan login ke backoffice.';
     } catch (Throwable $e) {
         $error = $e->getMessage();
+    }
+}
+
+function ensurePerformanceIndexes(PDO $pdo, string $database): void
+{
+    $indexes = [
+        'categories' => ['idx_categories_active_sort' => '(is_active, sort_order)'],
+        'products' => ['idx_products_active_popular' => '(is_active, is_popular)', 'idx_products_category' => '(category_id)'],
+        'promos' => ['idx_promos_active_type' => '(is_active, type)'],
+        'blogs' => ['idx_blogs_active_featured' => '(is_active, is_featured)'],
+        'orders' => ['idx_orders_status_created' => '(status, created_at)'],
+        'order_items' => ['idx_order_items_order' => '(order_id)'],
+        'stock_movements' => ['idx_stock_movements_product_created' => '(product_id, created_at)'],
+    ];
+    $check = $pdo->prepare('SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = ? AND table_name = ? AND index_name = ?');
+    foreach ($indexes as $table => $tableIndexes) {
+        foreach ($tableIndexes as $name => $columns) {
+            $check->execute([$database, $table, $name]);
+            if (!(int) $check->fetchColumn()) {
+                $pdo->exec("ALTER TABLE `$table` ADD INDEX `$name` $columns");
+            }
+        }
     }
 }
 

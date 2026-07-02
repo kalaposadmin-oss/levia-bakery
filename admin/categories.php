@@ -16,16 +16,22 @@ ob_start();
 ?>
 <section class="card form-card">
   <h3><?= $edit ? 'Edit Kategori' : 'Tambah Kategori' ?></h3>
-  <form method="post" action="category-save.php">
+  <form method="post" action="category-save.php" enctype="multipart/form-data">
     <input type="hidden" name="_token" value="<?= e(csrf_token()) ?>">
     <input type="hidden" name="id" value="<?= e((string) ($edit['id'] ?? 0)) ?>">
+    <input type="hidden" name="current_icon" value="<?= e($edit['icon'] ?? '') ?>">
     <div class="form-grid">
       <label>Nama Kategori <input name="name" value="<?= e($edit['name'] ?? '') ?>" required></label>
       <label>Slug <input name="slug" value="<?= e($edit['slug'] ?? '') ?>" placeholder="auto jika kosong"></label>
-      <label>Icon / Inisial <input name="icon" maxlength="12" value="<?= e($edit['icon'] ?? 'bread') ?>" placeholder="S / bread / tag"></label>
+      <label>Ikon bawaan <select name="icon">
+        <?php foreach (['bread' => 'Roti', 'croissant' => 'Croissant', 'snack' => 'Camilan', 'coffee' => 'Kopi', 'tag' => 'Promo'] as $value => $label): ?>
+          <option value="<?= e($value) ?>" <?= ($edit['icon'] ?? 'bread') === $value ? 'selected' : '' ?>><?= e($label) ?></option>
+        <?php endforeach; ?>
+      </select></label>
+      <label>Upload ikon sendiri <input type="file" name="icon_file" accept="image/png,image/jpeg,image/webp"><small>Opsional. Otomatis dibuat WebP 256×256.</small></label>
       <label>Urutan <input type="number" name="sort_order" min="0" value="<?= e((string) ($edit['sort_order'] ?? 0)) ?>"></label>
     </div>
-    <div class="checks"><label><input type="checkbox" name="is_active" value="1" <?= ($edit['is_active'] ?? 1) ? 'checked' : '' ?>> Aktif</label></div>
+    <div class="checks"><label><input type="checkbox" name="is_active" value="1" <?= ($edit['is_active'] ?? 1) ? 'checked' : '' ?>> Aktif</label><?php if (str_starts_with((string) ($edit['icon'] ?? ''), 'uploads/')): ?><label><input type="checkbox" name="use_builtin_icon" value="1"> Hapus upload dan gunakan ikon bawaan</label><?php endif; ?></div>
     <button class="primary-btn" type="submit">Simpan Kategori</button>
     <?php if ($edit): ?><a class="secondary-btn" href="categories.php">Batal</a><?php endif; ?>
   </form>
@@ -39,8 +45,8 @@ ob_start();
         <tr>
           <td><?= e($category['name']) ?></td>
           <td><?= e($category['slug']) ?></td>
-          <td><?= e($category['icon']) ?></td>
-          <td><span class="category-preview-icon"><?= e(strtoupper(substr((string) ($category['icon'] ?: $category['name']), 0, 1))) ?></span></td>
+          <td><?= str_starts_with((string) $category['icon'], 'uploads/') ? 'Ikon upload' : e($category['icon']) ?></td>
+          <td><span class="category-preview-icon"><?php if (str_starts_with((string) $category['icon'], 'uploads/')): ?><img src="../<?= e($category['icon']) ?>" alt=""><?php else: ?><?= e(['bread'=>'🥖','croissant'=>'🥐','snack'=>'🍪','coffee'=>'☕','tag'=>'%'][$category['icon']] ?? '🍞') ?><?php endif; ?></span></td>
           <td><?= e((string) $category['sort_order']) ?></td>
           <td><?= $category['is_active'] ? 'Ya' : 'Tidak' ?></td>
           <td class="actions">

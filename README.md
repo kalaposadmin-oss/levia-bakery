@@ -26,7 +26,15 @@ Aplikasi katalog harian Levia Bakery dengan PHP + MySQL. Web ini menjadi etalase
 6. Login backoffice di `https://domain-anda.com/admin/login.php`.
 7. Setelah install di hosting produksi, hapus atau rename `install.php`.
 
-Pastikan folder `uploads/` dan `storage/sessions/` writable oleh PHP hosting.
+Pastikan folder `uploads/`, `storage/sessions/`, dan `storage/cache/` writable oleh PHP hosting. Aktifkan ekstensi PHP GD agar gambar yang di-upload otomatis di-resize dan dikonversi ke WebP.
+
+## Optimasi performa
+
+- Upload JPG, PNG, atau WebP maksimal 12 MB; sistem otomatis memperbaiki orientasi, membatasi dimensi, dan menyimpan hasil WebP terkompresi.
+- Produk di-load bertahap per 12 item dan gambar di luar layar memakai lazy loading.
+- Data katalog di-cache selama 5 menit dan cache otomatis dibersihkan setelah perubahan dari backoffice.
+- `.htaccess` mengaktifkan kompresi dan cache aset selama satu tahun pada hosting Apache/LiteSpeed.
+- Instalasi baru otomatis mendapat indeks database untuk pencarian dan pengurutan katalog. Instalasi lama dapat menambah indeks yang belum ada dengan menjalankan installer kembali setelah backup database.
 
 ## Catatan GitHub
 

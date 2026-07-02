@@ -132,35 +132,12 @@ function homepage_section_enabled(string $key): bool
 
 function hero_image_path(?string $fallback = null): ?string
 {
-    return uploaded_image_path('hero_image_file', 'hero', $fallback);
+    return upload_image('hero_image_file', $fallback, ['prefix' => 'hero', 'max_width' => 1600, 'max_height' => 900, 'quality' => 82]);
 }
 
 function blog_image_path(?string $fallback = null): ?string
 {
-    return uploaded_image_path('blog_image_file', 'blog', $fallback);
-}
-
-function uploaded_image_path(string $field, string $prefix, ?string $fallback = null): ?string
-{
-    if (empty($_FILES[$field]['name']) || ($_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-        return $fallback;
-    }
-
-    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-    $mime = mime_content_type($_FILES[$field]['tmp_name']);
-    if (!isset($allowed[$mime])) {
-        return $fallback;
-    }
-
-    $dir = __DIR__ . '/../uploads';
-    if (!is_dir($dir)) {
-        mkdir($dir, 0775, true);
-    }
-
-    $name = $prefix . '-' . date('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
-    move_uploaded_file($_FILES[$field]['tmp_name'], $dir . '/' . $name);
-
-    return 'uploads/' . $name;
+    return upload_image('blog_image_file', $fallback, ['prefix' => 'blog', 'max_width' => 1200, 'max_height' => 900, 'quality' => 82]);
 }
 
 $settingKeys = ['store_name', 'store_branch', 'store_address', 'whatsapp', 'whatsapp_chat_text', 'google_maps_url'];

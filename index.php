@@ -5,9 +5,13 @@ require __DIR__ . '/lib/db.php';
 date_default_timezone_set('Asia/Jakarta');
 
 try {
-    $categories = db()->query('SELECT * FROM categories WHERE is_active = 1 ORDER BY sort_order, name')->fetchAll();
-    $products = db()->query('SELECT p.*, c.slug category_slug, c.name category_name FROM products p LEFT JOIN categories c ON c.id = p.category_id WHERE p.is_active = 1 ORDER BY p.is_popular DESC, p.name')->fetchAll();
-    $promos = db()->query('SELECT * FROM promos WHERE is_active = 1 ORDER BY type = "hero" DESC, id DESC')->fetchAll();
+    [$categories, $products, $promos] = cache_remember('storefront-catalog', 300, function (): array {
+        return [
+            db()->query('SELECT * FROM categories WHERE is_active = 1 ORDER BY sort_order, name')->fetchAll(),
+            db()->query('SELECT p.*, c.slug category_slug, c.name category_name FROM products p LEFT JOIN categories c ON c.id = p.category_id WHERE p.is_active = 1 ORDER BY p.is_popular DESC, p.name')->fetchAll(),
+            db()->query('SELECT * FROM promos WHERE is_active = 1 ORDER BY type = "hero" DESC, id DESC')->fetchAll(),
+        ];
+    });
 } catch (Throwable $e) {
     http_response_code(500);
     exit('Database belum siap. Jalankan install.php setelah mengisi config.php.');
@@ -89,6 +93,18 @@ function default_blog_section(): array
     ];
 }
 
+function blog_summary(string $value, int $limit = 220): string
+{
+    $text = html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $text = trim((string) preg_replace('/\s+/u', ' ', $text));
+    $length = function_exists('mb_strlen') ? mb_strlen($text, 'UTF-8') : strlen($text);
+    if ($length <= $limit) {
+        return $text;
+    }
+    $slice = function_exists('mb_substr') ? mb_substr($text, 0, $limit - 1, 'UTF-8') : substr($text, 0, $limit - 1);
+    return rtrim($slice) . '…';
+}
+
 function normalize_blog_section(string $json): array
 {
     $decoded = json_decode($json, true);
@@ -115,7 +131,7 @@ function homepage_blog_section(): array
             return [
                 'eyebrow' => trim((string) ($blog['eyebrow'] ?: 'Cerita Levia')),
                 'title' => trim((string) $blog['title']),
-                'body' => trim((string) ($blog['excerpt'] ?: $blog['content'] ?: '')),
+                'body' => blog_summary((string) ($blog['excerpt'] ?: $blog['content'] ?: '')),
                 'image' => trim((string) ($blog['image'] ?: 'assets/pairing.png')),
                 'button_label' => 'Baca blog',
                 'url' => 'blog.php?slug=' . rawurlencode((string) $blog['slug']),
@@ -170,15 +186,15 @@ if (!is_array($deliveryOptions) || !$deliveryOptions) {
 $categoryChips = array_map(fn($category) => [
     'slug' => (string) $category['slug'],
     'label' => (string) $category['name'],
-    'icon' => strtoupper(substr((string) ($category['icon'] ?: $category['name']), 0, 1)),
+    'icon' => (string) ($category['icon'] ?: 'bread'),
 ], $categories);
 
 if (!$showPromos) {
     $categoryChips = array_values(array_filter($categoryChips, fn($chip) => ($chip['slug'] ?? '') !== 'promo'));
 }
 
-array_unshift($categoryChips, ['slug' => 'popular', 'label' => 'Terlaris', 'icon' => '*']);
-$categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
+array_unshift($categoryChips, ['slug' => 'popular', 'label' => 'Terlaris', 'icon' => 'popular']);
+$categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => 'all'];
 ?>
 <!doctype html>
 <html lang="id">
@@ -189,7 +205,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/site.css?v=20260616f">
+  <link rel="stylesheet" href="assets/site.css?v=20260702g">
 </head>
 <body>
   <div class="app-shell">
@@ -223,16 +239,16 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
 
       <section class="quick-actions">
         <a class="quick-action-card" href="<?= e($googleMapsUrl !== '' ? $googleMapsUrl : '#') ?>" <?= $googleMapsUrl !== '' ? 'target="_blank" rel="noopener noreferrer"' : '' ?>>
-          <span class="quick-action-icon"><span class="ui-icon icon-location" aria-hidden="true"></span></span><span>Cek Lokasi</span>
+          <span class="quick-action-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.1 7-12A7 7 0 1 0 5 9c0 5.9 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg></span><span>Cek Lokasi</span>
         </a>
         <a class="quick-action-card quick-action-chat" href="<?= e($whatsAppChatUrl) ?>" <?= $whatsAppNumber !== '' ? 'target="_blank" rel="noopener noreferrer"' : '' ?>>
-          <span class="quick-action-icon"><span class="ui-icon icon-chat" aria-hidden="true"></span></span><span>Chat WhatsApp</span>
+          <span class="quick-action-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.6a8 8 0 0 1-11.8 7L4 20l1.4-4A8 8 0 1 1 20 11.6Z"/><path d="M9 8.5c.5 2.5 2 4 4.5 5"/></svg></span><span>Chat WhatsApp</span>
         </a>
       </section>
 
       <?php if ($showHeroPromo): ?>
       <section class="promo-hero-card">
-        <img src="<?= e($hero['image']) ?>" alt="<?= e($hero['title']) ?>">
+        <img src="<?= e($hero['image']) ?>" alt="<?= e($hero['title']) ?>" decoding="async">
         <div class="promo-hero-copy">
           <h1><?= e($hero['title']) ?></h1>
           <p><?= e($hero['subtitle']) ?></p>
@@ -244,7 +260,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
       <section class="category-grid">
         <?php foreach ($categoryChips as $chip): ?>
           <button class="category <?= $chip['slug'] === 'promo' ? 'pink' : '' ?> <?= $chip['slug'] === 'all' ? 'is-active' : '' ?>" type="button" data-category="<?= e($chip['slug']) ?>" data-category-label="<?= e($chip['label']) ?>">
-            <span><?= e($chip['icon']) ?></span>
+            <span><?php if (str_starts_with($chip['icon'], 'uploads/')): ?><img src="<?= e($chip['icon']) ?>" alt="" loading="lazy" decoding="async"><?php else: ?><?= e(['bread'=>'🥖','croissant'=>'🥐','snack'=>'🍪','coffee'=>'☕','tag'=>'%','popular'=>'★','all'=>'▦'][$chip['icon']] ?? '🍞') ?><?php endif; ?></span>
             <?= e($chip['label']) ?>
           </button>
         <?php endforeach; ?>
@@ -258,7 +274,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
           <?php foreach ($bestSellers as $product): ?>
             <article class="product-card" data-product-id="<?= e((string) $product['id']) ?>">
               <div class="product-image">
-                <img src="<?= e($product['image'] ?: 'assets/almond-croissant.png') ?>" alt="<?= e($product['name']) ?>">
+                <img src="<?= e($product['image'] ?: 'assets/almond-croissant.png') ?>" alt="<?= e($product['name']) ?>" loading="lazy" decoding="async">
                 <span class="badge <?= (($product['stock_status'] ?? '') === 'limited') ? 'limited' : ((($product['stock_status'] ?? '') === 'sold_out') ? 'sold-out' : 'ready') ?>">
                   <?= (($product['stock_status'] ?? '') === 'sold_out') ? 'Habis' : (($product['stock_status'] ?? '') === 'limited' ? 'Terbatas' : 'Ready') ?>
                 </span>
@@ -279,7 +295,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
         <div class="promo-strip">
           <?php foreach (array_slice($promos, 1, 4) as $promo): ?>
             <button class="promo-banner" type="button" data-promo="<?= e($promo['title']) ?>">
-              <img src="<?= e($promo['image']) ?>" alt="<?= e($promo['title']) ?>">
+              <img src="<?= e($promo['image']) ?>" alt="<?= e($promo['title']) ?>" loading="lazy" decoding="async">
               <b><?= e($promo['title']) ?></b>
               <small><?= e($promo['subtitle']) ?></small>
             </button>
@@ -293,10 +309,10 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
         <div class="section-title"><h2 id="catalogTitle">Katalog Hari Ini</h2><button type="button" data-category-jump="all">Semua</button></div>
         <p class="section-note">Ketersediaan final dikonfirmasi lewat WhatsApp</p>
         <div class="product-grid" id="stockList">
-          <?php foreach ($products as $product): ?>
+          <?php foreach (array_slice($products, 0, 12) as $product): ?>
             <article class="product-card" data-product-id="<?= e((string) $product['id']) ?>">
               <div class="product-image">
-                <img src="<?= e($product['image'] ?: 'assets/almond-croissant.png') ?>" alt="<?= e($product['name']) ?>">
+                <img src="<?= e($product['image'] ?: 'assets/almond-croissant.png') ?>" alt="<?= e($product['name']) ?>" loading="lazy" decoding="async">
                 <span class="badge <?= (($product['stock_status'] ?? '') === 'limited') ? 'limited' : ((($product['stock_status'] ?? '') === 'sold_out') ? 'sold-out' : 'ready') ?>">
                   <?= (($product['stock_status'] ?? '') === 'sold_out') ? 'Habis' : (($product['stock_status'] ?? '') === 'limited' ? 'Terbatas' : 'Ready') ?>
                 </span>
@@ -308,6 +324,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
             </article>
           <?php endforeach; ?>
         </div>
+        <button class="catalog-load-more" id="catalogLoadMore" type="button" <?= count($products) <= 12 ? 'hidden' : '' ?>>Muat produk lainnya</button>
       </section>
       <?php endif; ?>
 
@@ -324,7 +341,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
       <?php if ($showBlogSection): ?>
       <section class="story-section blog-section" id="blogSection">
         <article class="blog-feature">
-          <img src="<?= e($blogSection['image']) ?>" alt="<?= e($blogSection['title']) ?>">
+          <img src="<?= e($blogSection['image']) ?>" alt="<?= e($blogSection['title']) ?>" loading="lazy" decoding="async">
           <div class="blog-copy">
             <small><?= e($blogSection['eyebrow']) ?></small>
             <h2><?= e($blogSection['title']) ?></h2>
@@ -339,10 +356,10 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
   </div>
 
   <nav class="bottom-nav">
-    <a class="is-active" href="index.php#top"><span class="ui-icon icon-home" aria-hidden="true"></span><span>Beranda</span></a>
-    <a href="index.php#catalogSection"><span class="ui-icon icon-catalog" aria-hidden="true"></span><span>Katalog</span></a>
-    <a href="index.php#blogSection"><span class="ui-icon icon-blog" aria-hidden="true"></span><span>Blog</span></a>
-    <a href="#profile"><span class="ui-icon icon-profile" aria-hidden="true"></span><span>Profile</span></a>
+    <a class="is-active" href="index.php#top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg><span>Beranda</span></a>
+    <a href="index.php#catalogSection"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/></svg><span>Katalog</span></a>
+    <a href="index.php#blogSection"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H11a2 2 0 0 1 2 2v17a3 3 0 0 0-3-3H4Z"/><path d="M20 5.5A3.5 3.5 0 0 0 16.5 2H15a2 2 0 0 0-2 2v17a3 3 0 0 1 3-3h4Z"/></svg><span>Blog</span></a>
+    <a href="#profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Profil</span></a>
   </nav>
 
   <div class="cart-drawer" id="cartDrawer" aria-hidden="true">
@@ -412,7 +429,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => '#'];
     window.LEVIA_ADMIN_WHATSAPP = <?= json_encode($whatsAppNumber, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     window.LEVIA_STORE_NAME = <?= json_encode($storeName, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
   </script>
-  <script src="assets/app.js?v=20260616f"></script>
+  <script src="assets/app.js?v=20260702a"></script>
 </body>
 </html>
 

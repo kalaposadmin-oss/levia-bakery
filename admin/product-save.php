@@ -39,7 +39,7 @@ do {
     }
 } while ($exists);
 
-$image = upload_image('image', $_POST['current_image'] ?? null);
+$image = upload_image('image', $_POST['current_image'] ?? null, ['prefix' => 'product', 'max_width' => 900, 'max_height' => 900, 'quality' => 82]);
 $data = [
     $_POST['category_id'] !== '' ? (int) $_POST['category_id'] : null,
     $name,
@@ -63,5 +63,6 @@ if ($id) {
     db()->prepare('INSERT INTO products (category_id, name, slug, description, ingredients, package_info, shelf_life, price, stock, stock_status, image, is_popular, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute($data);
 }
 
+clear_storefront_cache();
 $_SESSION['flash'] = 'Produk berhasil disimpan.';
 redirect('admin/products.php');

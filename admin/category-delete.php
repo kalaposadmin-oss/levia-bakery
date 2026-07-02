@@ -16,5 +16,6 @@ $productsStmt = db()->prepare('UPDATE products SET category_id = NULL WHERE cate
 $productsStmt->execute([$id]);
 
 db()->prepare('DELETE FROM categories WHERE id = ?')->execute([$id]);
+clear_storefront_cache();
 $_SESSION['flash'] = 'Kategori berhasil dihapus.';
 redirect('admin/categories.php');

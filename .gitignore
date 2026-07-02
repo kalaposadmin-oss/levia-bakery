@@ -1,3 +1,6 @@
 storage/sessions/
+storage/cache/
 *.log
 config.php
+uploads/*
+!uploads/.htaccess

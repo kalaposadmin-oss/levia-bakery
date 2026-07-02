@@ -60,7 +60,7 @@ ob_start();
           <?php endforeach; ?>
         </select>
       </label>
-      <label>Gambar <input type="file" name="image" accept="image/png,image/jpeg,image/webp"></label>
+      <label>Gambar <input type="file" name="image" accept="image/png,image/jpeg,image/webp"><small>Otomatis di-resize dan dikompres ke WebP. Maksimal 12 MB.</small></label>
       <label>Isi / berat <input name="package_info" value="<?= e($product['package_info'] ?? '') ?>" placeholder="Contoh: 6 pcs / 250 gram"></label>
       <label>Masa simpan <input name="shelf_life" value="<?= e($product['shelf_life'] ?? '') ?>" placeholder="Contoh: 2 hari suhu ruang"></label>
     </div>

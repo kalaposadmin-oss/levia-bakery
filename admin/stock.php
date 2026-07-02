@@ -62,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/stock.php');
     }
 
+    clear_storefront_cache();
     $_SESSION['flash'] = $updated > 0 ? $updated . ' perubahan ketersediaan disimpan.' : 'Tidak ada perubahan ketersediaan.';
     redirect('admin/stock.php');
 }

@@ -10,9 +10,10 @@ CREATE TABLE IF NOT EXISTS categories (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
   slug VARCHAR(120) NOT NULL UNIQUE,
-  icon VARCHAR(40) DEFAULT 'bread',
+  icon VARCHAR(255) DEFAULT 'bread',
   sort_order INT NOT NULL DEFAULT 0,
-  is_active TINYINT(1) NOT NULL DEFAULT 1
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  INDEX idx_categories_active_sort (is_active, sort_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS products (
@@ -32,6 +33,8 @@ CREATE TABLE IF NOT EXISTS products (
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_products_active_popular (is_active, is_popular),
+  INDEX idx_products_category (category_id),
   CONSTRAINT products_category_id_fk FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -45,7 +48,8 @@ CREATE TABLE IF NOT EXISTS promos (
   starts_at DATE NULL,
   ends_at DATE NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_promos_active_type (is_active, type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS blogs (
@@ -54,12 +58,13 @@ CREATE TABLE IF NOT EXISTS blogs (
   slug VARCHAR(190) NOT NULL UNIQUE,
   eyebrow VARCHAR(120) NULL,
   excerpt VARCHAR(255) NULL,
-  content TEXT NULL,
+  content LONGTEXT NULL,
   image VARCHAR(255) NULL,
   is_featured TINYINT(1) NOT NULL DEFAULT 0,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+  updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_blogs_active_featured (is_active, is_featured)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -73,7 +78,8 @@ CREATE TABLE IF NOT EXISTS orders (
   subtotal DECIMAL(14,2) NOT NULL DEFAULT 0,
   total DECIMAL(14,2) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+  updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_orders_status_created (status, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS order_items (
@@ -84,6 +90,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   qty INT NOT NULL DEFAULT 1,
   price DECIMAL(14,2) NOT NULL DEFAULT 0,
   subtotal DECIMAL(14,2) NOT NULL DEFAULT 0,
+  INDEX idx_order_items_order (order_id),
   CONSTRAINT order_items_order_id_fk FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
   CONSTRAINT order_items_product_id_fk FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -95,6 +102,7 @@ CREATE TABLE IF NOT EXISTS stock_movements (
   qty INT NOT NULL,
   note VARCHAR(255) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_stock_movements_product_created (product_id, created_at),
   CONSTRAINT stock_movements_product_id_fk FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

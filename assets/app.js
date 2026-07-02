@@ -37,7 +37,8 @@ const state = {
   cart: JSON.parse(localStorage.getItem("leviaCartDb") || "{}"),
   orders: [],
   category: "all",
-  query: ""
+  query: "",
+  visibleCount: 12
 };
 
 const bestSellerList = document.querySelector("#bestSellerList");
@@ -67,6 +68,7 @@ const productDetailPackage = document.querySelector("#productDetailPackage");
 const productDetailStock = document.querySelector("#productDetailStock");
 const productDetailShelfLife = document.querySelector("#productDetailShelfLife");
 const productDetailAddBtn = document.querySelector("#productDetailAddBtn");
+const catalogLoadMore = document.querySelector("#catalogLoadMore");
 
 function money(value) {
   return rupiah.format(value).replace(/\s/g, " ");
@@ -130,7 +132,7 @@ function productCard(product, compact = false) {
   return `
     <article class="product-card" data-product-id="${escapeHtml(product.id)}" tabindex="0" role="button" aria-label="Lihat detail ${escapeHtml(product.name)}">
       <div class="product-image">
-        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">
+        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async">
         <span class="${badgeClass}">${escapeHtml(product.badge)}</span>
       </div>
       <div class="product-body">
@@ -200,7 +202,8 @@ function filteredProducts() {
 function renderProducts() {
   const popular = products.filter((product) => product.tags.includes("popular")).slice(0, 5);
   const fallbackPopular = popular.length ? popular : products.slice(0, 5);
-  const stock = filteredProducts();
+  const filtered = filteredProducts();
+  const stock = filtered.slice(0, state.visibleCount);
 
   if (bestSellerList) {
     bestSellerList.innerHTML = fallbackPopular.length
@@ -213,6 +216,7 @@ function renderProducts() {
       ? stock.map((product) => productCard(product)).join("")
       : '<div class="empty-state">Menu tidak ditemukan.</div>';
   }
+  if (catalogLoadMore) catalogLoadMore.hidden = stock.length >= filtered.length;
 }
 
 function renderDeliveryOptions() {
@@ -336,6 +340,7 @@ function renderCart() {
 
 function setCategory(category, shouldScroll = false) {
   state.category = category;
+  state.visibleCount = 12;
   document.querySelectorAll(".category").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.category === category);
   });
@@ -446,6 +451,10 @@ document.addEventListener("click", (event) => {
   if (target.dataset.decrement) changeQty(target.dataset.decrement, -1);
   if (target.dataset.category) setCategory(target.dataset.category, true);
   if (target.dataset.categoryJump) setCategory(target.dataset.categoryJump, true);
+  if (target.id === "catalogLoadMore") {
+    state.visibleCount += 12;
+    renderProducts();
+  }
   if (target.dataset.openCart !== undefined) openCart();
   if (target.dataset.closeCart !== undefined) closeCart();
   if (target.dataset.closeProductDetail !== undefined) closeProductDetail();
@@ -477,6 +486,7 @@ document.addEventListener("keydown", (event) => {
 if (searchInput) {
   searchInput.addEventListener("input", (event) => {
     state.query = event.target.value;
+    state.visibleCount = 12;
     renderProducts();
   });
 }

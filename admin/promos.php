@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/promos.php');
     }
 
-    $image = upload_image('image', $_POST['current_image'] ?? null);
+    $image = upload_image('image', $_POST['current_image'] ?? null, ['prefix' => 'promo', 'max_width' => 1400, 'max_height' => 900, 'quality' => 82]);
     $data = [
         $titleInput,
         trim((string) ($_POST['subtitle'] ?? '')),
@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         db()->prepare('INSERT INTO promos (title, subtitle, image, type, discount_percent, is_active) VALUES (?, ?, ?, ?, ?, ?)')->execute($data);
     }
+    clear_storefront_cache();
     $_SESSION['flash'] = 'Promo berhasil disimpan.';
     redirect('admin/promos.php');
 }
@@ -57,7 +58,7 @@ ob_start();
       <label>Subtitle <input name="subtitle" value="<?= e($edit['subtitle'] ?? '') ?>"></label>
       <label>Tipe <select name="type"><option value="hero" <?= ($edit['type'] ?? '') === 'hero' ? 'selected' : '' ?>>Hero</option><option value="small" <?= ($edit['type'] ?? 'small') === 'small' ? 'selected' : '' ?>>Small</option></select></label>
       <label>Diskon % <input type="number" name="discount_percent" min="0" max="100" value="<?= e((string) ($edit['discount_percent'] ?? 0)) ?>"></label>
-      <label>Gambar <input type="file" name="image" accept="image/png,image/jpeg,image/webp"></label>
+      <label>Gambar <input type="file" name="image" accept="image/png,image/jpeg,image/webp"><small>Otomatis di-resize dan dikompres ke WebP. Maksimal 12 MB.</small></label>
     </div>
     <div class="checks"><label><input type="checkbox" name="is_active" value="1" <?= ($edit['is_active'] ?? 1) ? 'checked' : '' ?>> Aktif</label></div>
     <button class="primary-btn" type="submit">Simpan Promo</button>

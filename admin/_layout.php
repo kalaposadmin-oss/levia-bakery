@@ -23,9 +23,9 @@ $navigation = [
   <title><?= e($title) ?> - Levia Daily Catalog</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/admin.css">
+  <link rel="stylesheet" href="../assets/admin.css?v=20260702f">
 </head>
 <body class="admin-shell">
   <aside class="sidebar">
@@ -79,5 +79,6 @@ $navigation = [
 
     <?= $content ?>
   </main>
+  <?php foreach (($pageScripts ?? []) as $script): ?><script src="<?= e($script) ?>" defer></script><?php endforeach; ?>
 </body>
 </html>
