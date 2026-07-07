@@ -39,7 +39,7 @@ do {
     }
 } while ($exists);
 
-$image = upload_image('image', $_POST['current_image'] ?? null, ['prefix' => 'product', 'max_width' => 900, 'max_height' => 900, 'quality' => 82]);
+$image = upload_image('image', $_POST['current_image'] ?? null, ['prefix' => 'product', 'max_width' => 700, 'max_height' => 700, 'quality' => 78, 'avif_quality' => 52, 'responsive_widths' => [320, 640]]);
 $data = [
     $_POST['category_id'] !== '' ? (int) $_POST['category_id'] : null,
     $name,

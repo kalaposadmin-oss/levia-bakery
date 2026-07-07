@@ -1,6 +1,7 @@
-﻿<?php
+<?php
 
 require __DIR__ . '/lib/db.php';
+header('Cache-Control: no-cache, must-revalidate');
 ensure_blog_schema();
 
 $slug = trim((string) ($_GET['slug'] ?? ''));
@@ -31,6 +32,7 @@ $title = $blog ? (string) $blog['title'] : 'Blog tidak ditemukan';
 $image = $blog && !empty($blog['image']) ? (string) $blog['image'] : 'assets/pairing.png';
 $eyebrow = $blog ? (string) ($blog['eyebrow'] ?: 'Cerita Levia') : 'Blog';
 $content = $blog ? sanitize_blog_html((string) ($blog['content'] ?: $blog['excerpt'])) : '<p>Blog belum tersedia.</p>';
+$blogImage = responsive_image_data($image, [640, 960, 1400], 80, 55);
 ?>
 <!doctype html>
 <html lang="id">
@@ -38,10 +40,11 @@ $content = $blog ? sanitize_blog_html((string) ($blog['content'] ?: $blog['excer
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= e($title) ?> - <?= e($storeName) ?></title>
+  <?php if ($blogImage['avif'] !== ''): ?><link rel="preload" as="image" href="<?= e($blogImage['src']) ?>" imagesrcset="<?= e($blogImage['avif']) ?>" imagesizes="(max-width: 768px) 100vw, 980px" type="image/avif" fetchpriority="high"><?php elseif ($blogImage['webp'] !== ''): ?><link rel="preload" as="image" href="<?= e($blogImage['src']) ?>" imagesrcset="<?= e($blogImage['webp']) ?>" imagesizes="(max-width: 768px) 100vw, 980px" type="image/webp" fetchpriority="high"><?php endif; ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/site.css?v=20260702g">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="assets/site.css?v=20260707a">
 </head>
 <body>
   <main class="storefront blog-detail-page" id="top">
@@ -58,7 +61,7 @@ $content = $blog ? sanitize_blog_html((string) ($blog['content'] ?: $blog['excer
     </header>
     <nav class="blog-detail-nav"><a href="index.php#blogSection"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18 9 12l6-6"/></svg>Kembali</a></nav>
     <article class="blog-detail-card">
-      <img class="blog-detail-image" src="<?= e($image) ?>" alt="<?= e($title) ?>">
+      <?= responsive_image_html($image, $title, ['class' => 'blog-detail-image', 'widths' => [640, 960, 1400], 'sizes' => '(max-width: 768px) 100vw, 980px', 'loading' => 'eager', 'fetchpriority' => 'high']) ?>
       <div class="blog-detail-copy">
         <small><?= e($eyebrow) ?></small>
         <h1><?= e($title) ?></h1>

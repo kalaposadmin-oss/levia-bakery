@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/promos.php');
     }
 
-    $image = upload_image('image', $_POST['current_image'] ?? null, ['prefix' => 'promo', 'max_width' => 1400, 'max_height' => 900, 'quality' => 82]);
+    $image = upload_image('image', $_POST['current_image'] ?? null, ['prefix' => 'promo', 'max_width' => 1200, 'max_height' => 900, 'quality' => 80, 'avif_quality' => 55, 'responsive_widths' => [480, 960, 1200]]);
     $data = [
         $titleInput,
         trim((string) ($_POST['subtitle'] ?? '')),

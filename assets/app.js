@@ -21,6 +21,10 @@ const products = (productsRaw.length ? productsRaw : fallbackProducts).map((prod
     product.category_slug === "promo" ? "promo" : ""
   ].filter(Boolean),
   image: product.image || "assets/almond-croissant.png",
+  imageSrcsetWebp: product.image_srcset_webp || "",
+  imageSrcsetAvif: product.image_srcset_avif || "",
+  imageWidth: Number(product.image_width) || 640,
+  imageHeight: Number(product.image_height) || 640,
   badge: (product.stock_status || product.stockStatus) === "limited" ? "Terbatas" : (product.stock_status || product.stockStatus) === "sold_out" ? "Habis" : "Ready"
 }));
 
@@ -125,6 +129,12 @@ function showToast(message) {
   showToast.timer = window.setTimeout(() => toast.classList.remove("is-visible"), 2400);
 }
 
+function productPicture(product) {
+  const avif = product.imageSrcsetAvif ? '<source type="image/avif" srcset="' + escapeHtml(product.imageSrcsetAvif) + '" sizes="(max-width: 520px) 44vw, 210px">' : "";
+  const webp = product.imageSrcsetWebp ? '<source type="image/webp" srcset="' + escapeHtml(product.imageSrcsetWebp) + '" sizes="(max-width: 520px) 44vw, 210px">' : "";
+  return '<picture>' + avif + webp + '<img src="' + escapeHtml(product.image) + '" alt="' + escapeHtml(product.name) + '" width="' + product.imageWidth + '" height="' + product.imageHeight + '" loading="lazy" decoding="async"></picture>';
+}
+
 function productCard(product, compact = false) {
   const isSoldOut = product.stockStatus === "sold_out";
   const badgeClass = product.badge === "Terbatas" ? "badge limited" : product.badge === "Habis" ? "badge sold-out" : "badge ready";
@@ -132,7 +142,7 @@ function productCard(product, compact = false) {
   return `
     <article class="product-card" data-product-id="${escapeHtml(product.id)}" tabindex="0" role="button" aria-label="Lihat detail ${escapeHtml(product.name)}">
       <div class="product-image">
-        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async">
+        ${productPicture(product)}
         <span class="${badgeClass}">${escapeHtml(product.badge)}</span>
       </div>
       <div class="product-body">

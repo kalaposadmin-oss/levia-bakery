@@ -1,8 +1,9 @@
-﻿<?php
+<?php
 
 require __DIR__ . '/lib/db.php';
 
 date_default_timezone_set('Asia/Jakarta');
+header('Cache-Control: no-cache, must-revalidate');
 
 try {
     [$categories, $products, $promos] = cache_remember('storefront-catalog', 300, function (): array {
@@ -195,6 +196,16 @@ if (!$showPromos) {
 
 array_unshift($categoryChips, ['slug' => 'popular', 'label' => 'Terlaris', 'icon' => 'popular']);
 $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => 'all'];
+$heroImage = responsive_image_data($hero['image'], [640, 960, 1400], 80, 55);
+$productsClient = array_map(function (array $product): array {
+    $image = responsive_image_data($product['image'] ?: 'assets/almond-croissant.png', [320, 640], 78, 52);
+    $product['image'] = $image['src'];
+    $product['image_srcset_webp'] = $image['webp'];
+    $product['image_srcset_avif'] = $image['avif'];
+    $product['image_width'] = $image['width'];
+    $product['image_height'] = $image['height'];
+    return $product;
+}, $products);
 ?>
 <!doctype html>
 <html lang="id">
@@ -202,10 +213,11 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => 'all'];
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= e($storeName) ?> Daily Catalog</title>
+  <?php if ($heroImage['avif'] !== ''): ?><link rel="preload" as="image" href="<?= e($heroImage['src']) ?>" imagesrcset="<?= e($heroImage['avif']) ?>" imagesizes="(max-width: 768px) 100vw, 980px" type="image/avif" fetchpriority="high"><?php elseif ($heroImage['webp'] !== ''): ?><link rel="preload" as="image" href="<?= e($heroImage['src']) ?>" imagesrcset="<?= e($heroImage['webp']) ?>" imagesizes="(max-width: 768px) 100vw, 980px" type="image/webp" fetchpriority="high"><?php endif; ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/site.css?v=20260702g">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="assets/site.css?v=20260707a">
 </head>
 <body>
   <div class="app-shell">
@@ -227,7 +239,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => 'all'];
       </header>
 
       <section class="hero-showcase">
-        <img src="<?= e($hero['image']) ?>" alt="<?= e($hero['title']) ?>">
+        <?= responsive_image_html($hero['image'], $hero['title'], ['widths' => [640, 960, 1400], 'sizes' => '(max-width: 768px) 100vw, 980px', 'loading' => 'eager', 'fetchpriority' => 'high']) ?>
       </section>
 
 <?php if (!$storeCanCheckout): ?>
@@ -248,7 +260,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => 'all'];
 
       <?php if ($showHeroPromo): ?>
       <section class="promo-hero-card">
-        <img src="<?= e($hero['image']) ?>" alt="<?= e($hero['title']) ?>" decoding="async">
+        <?= responsive_image_html($hero['image'], $hero['title'], ['widths' => [640, 960, 1400], 'sizes' => '(max-width: 768px) 100vw, 980px', 'loading' => 'lazy']) ?>
         <div class="promo-hero-copy">
           <h1><?= e($hero['title']) ?></h1>
           <p><?= e($hero['subtitle']) ?></p>
@@ -274,7 +286,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => 'all'];
           <?php foreach ($bestSellers as $product): ?>
             <article class="product-card" data-product-id="<?= e((string) $product['id']) ?>">
               <div class="product-image">
-                <img src="<?= e($product['image'] ?: 'assets/almond-croissant.png') ?>" alt="<?= e($product['name']) ?>" loading="lazy" decoding="async">
+                <?= responsive_image_html($product['image'] ?: 'assets/almond-croissant.png', $product['name'], ['widths' => [320, 640], 'sizes' => '(max-width: 520px) 44vw, 210px']) ?>
                 <span class="badge <?= (($product['stock_status'] ?? '') === 'limited') ? 'limited' : ((($product['stock_status'] ?? '') === 'sold_out') ? 'sold-out' : 'ready') ?>">
                   <?= (($product['stock_status'] ?? '') === 'sold_out') ? 'Habis' : (($product['stock_status'] ?? '') === 'limited' ? 'Terbatas' : 'Ready') ?>
                 </span>
@@ -295,7 +307,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => 'all'];
         <div class="promo-strip">
           <?php foreach (array_slice($promos, 1, 4) as $promo): ?>
             <button class="promo-banner" type="button" data-promo="<?= e($promo['title']) ?>">
-              <img src="<?= e($promo['image']) ?>" alt="<?= e($promo['title']) ?>" loading="lazy" decoding="async">
+              <?= responsive_image_html($promo['image'], $promo['title'], ['widths' => [480, 960], 'sizes' => '(max-width: 768px) 82vw, 460px']) ?>
               <b><?= e($promo['title']) ?></b>
               <small><?= e($promo['subtitle']) ?></small>
             </button>
@@ -312,7 +324,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => 'all'];
           <?php foreach (array_slice($products, 0, 12) as $product): ?>
             <article class="product-card" data-product-id="<?= e((string) $product['id']) ?>">
               <div class="product-image">
-                <img src="<?= e($product['image'] ?: 'assets/almond-croissant.png') ?>" alt="<?= e($product['name']) ?>" loading="lazy" decoding="async">
+                <?= responsive_image_html($product['image'] ?: 'assets/almond-croissant.png', $product['name'], ['widths' => [320, 640], 'sizes' => '(max-width: 520px) 44vw, 210px']) ?>
                 <span class="badge <?= (($product['stock_status'] ?? '') === 'limited') ? 'limited' : ((($product['stock_status'] ?? '') === 'sold_out') ? 'sold-out' : 'ready') ?>">
                   <?= (($product['stock_status'] ?? '') === 'sold_out') ? 'Habis' : (($product['stock_status'] ?? '') === 'limited' ? 'Terbatas' : 'Ready') ?>
                 </span>
@@ -341,7 +353,7 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => 'all'];
       <?php if ($showBlogSection): ?>
       <section class="story-section blog-section" id="blogSection">
         <article class="blog-feature">
-          <img src="<?= e($blogSection['image']) ?>" alt="<?= e($blogSection['title']) ?>" loading="lazy" decoding="async">
+          <?= responsive_image_html($blogSection['image'], $blogSection['title'], ['widths' => [240, 480], 'sizes' => '120px']) ?>
           <div class="blog-copy">
             <small><?= e($blogSection['eyebrow']) ?></small>
             <h2><?= e($blogSection['title']) ?></h2>
@@ -423,13 +435,13 @@ $categoryChips[] = ['slug' => 'all', 'label' => 'Semua', 'icon' => 'all'];
 
   <div class="toast" id="toast"></div>
   <script>
-    window.LEVIA_PRODUCTS = <?= json_encode($products, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+    window.LEVIA_PRODUCTS = <?= json_encode($productsClient, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     window.LEVIA_ORDER_ENDPOINT = "api/order-create.php";
     window.LEVIA_DELIVERY_OPTIONS = <?= json_encode($deliveryOptions, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     window.LEVIA_ADMIN_WHATSAPP = <?= json_encode($whatsAppNumber, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     window.LEVIA_STORE_NAME = <?= json_encode($storeName, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
   </script>
-  <script src="assets/app.js?v=20260702a"></script>
+  <script src="assets/app.js?v=20260707a" defer></script>
 </body>
 </html>
 

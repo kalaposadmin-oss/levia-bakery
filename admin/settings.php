@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 require __DIR__ . '/../lib/db.php';
 require_admin();
@@ -132,12 +132,12 @@ function homepage_section_enabled(string $key): bool
 
 function hero_image_path(?string $fallback = null): ?string
 {
-    return upload_image('hero_image_file', $fallback, ['prefix' => 'hero', 'max_width' => 1600, 'max_height' => 900, 'quality' => 82]);
+    return upload_image('hero_image_file', $fallback, ['prefix' => 'hero', 'max_width' => 1400, 'max_height' => 900, 'quality' => 80, 'avif_quality' => 55, 'responsive_widths' => [640, 960, 1400]]);
 }
 
 function blog_image_path(?string $fallback = null): ?string
 {
-    return upload_image('blog_image_file', $fallback, ['prefix' => 'blog', 'max_width' => 1200, 'max_height' => 900, 'quality' => 82]);
+    return upload_image('blog_image_file', $fallback, ['prefix' => 'blog', 'max_width' => 1200, 'max_height' => 900, 'quality' => 80, 'avif_quality' => 55, 'responsive_widths' => [480, 960, 1200]]);
 }
 
 $settingKeys = ['store_name', 'store_branch', 'store_address', 'whatsapp', 'whatsapp_chat_text', 'google_maps_url'];

@@ -276,6 +276,101 @@ function sanitize_blog_html(string $html): string
     return trim($output);
 }
 
+function local_image_source(string $path): ?array
+{
+    $clean = ltrim((string) parse_url($path, PHP_URL_PATH), '/');
+    if ($clean === '' || str_contains($clean, '..')) { return null; }
+    $root = realpath(__DIR__ . '/..');
+    $absolute = realpath(__DIR__ . '/../' . $clean);
+    if (!$root || !$absolute || !is_file($absolute)) { return null; }
+    $root = str_replace('\\', '/', $root) . '/';
+    if (!str_starts_with(str_replace('\\', '/', $absolute), $root)) { return null; }
+    $size = @getimagesize($absolute);
+    if (!$size) { return null; }
+    return ['path' => $clean, 'absolute' => $absolute, 'width' => (int) $size[0], 'height' => (int) $size[1], 'mime' => (string) ($size['mime'] ?? '')];
+}
+
+function load_gd_image(string $absolute, string $mime): mixed
+{
+    return match ($mime) {
+        'image/jpeg' => @imagecreatefromjpeg($absolute),
+        'image/png' => @imagecreatefrompng($absolute),
+        'image/webp' => @imagecreatefromwebp($absolute),
+        'image/avif' => function_exists('imagecreatefromavif') ? @imagecreatefromavif($absolute) : false,
+        default => false,
+    };
+}
+
+function optimized_image_variant(string $path, int $targetWidth, string $format = 'webp', int $quality = 80): ?string
+{
+    if (!extension_loaded('gd') || !in_array($format, ['webp', 'avif'], true)) { return null; }
+    $info = local_image_source($path);
+    if (!$info) { return null; }
+    $width = max(160, min($info['width'], $targetWidth));
+    $height = max(1, (int) round($info['height'] * ($width / $info['width'])));
+    $stamp = (string) (@filemtime($info['absolute']) ?: 0);
+    $hash = substr(sha1($info['path'] . '|' . $stamp . '|' . $width . '|' . $format . '|' . $quality), 0, 12);
+    $stem = preg_replace('/[^a-z0-9_-]+/i', '-', pathinfo($info['path'], PATHINFO_FILENAME)) ?: 'image';
+    $relative = 'uploads/optimized/' . $stem . '-' . $hash . '-w' . $width . '.' . $format;
+    $absolute = __DIR__ . '/../' . $relative;
+    if (is_file($absolute) && filesize($absolute) > 0) { return $relative; }
+    $source = load_gd_image($info['absolute'], $info['mime']);
+    if (!$source) { return null; }
+    $output = imagecreatetruecolor($width, $height);
+    imagealphablending($output, false);
+    imagesavealpha($output, true);
+    imagefill($output, 0, 0, imagecolorallocatealpha($output, 0, 0, 0, 127));
+    imagecopyresampled($output, $source, 0, 0, 0, 0, $width, $height, $info['width'], $info['height']);
+    $dir = dirname($absolute);
+    if (!is_dir($dir)) { @mkdir($dir, 0775, true); }
+    $temporary = $absolute;
+    $saved = $format === 'avif' && function_exists('imageavif')
+        ? @imageavif($output, $temporary, max(35, min(70, $quality)))
+        : ($format === 'webp' ? @imagewebp($output, $temporary, max(60, min(90, $quality))) : false);
+    imagedestroy($source); imagedestroy($output);
+    if (!$saved) { @unlink($temporary); return null; }
+    return is_file($absolute) && filesize($absolute) > 0 ? $relative : null;
+}
+
+function responsive_image_data(string $path, array $widths = [480, 960, 1400], int $webpQuality = 80, int $avifQuality = 55): array
+{
+    $info = local_image_source($path);
+    if (!$info) { return ['src' => $path, 'width' => null, 'height' => null, 'webp' => '', 'avif' => '']; }
+    $widths = array_values(array_unique(array_filter(array_map('intval', $widths), fn(int $width): bool => $width > 0)));
+    sort($widths);
+    $widths = array_values(array_unique(array_map(fn(int $width): int => min($width, $info['width']), $widths)));
+    $webp = []; $avif = [];
+    foreach ($widths as $width) {
+        $webpPath = optimized_image_variant($path, $width, 'webp', $webpQuality);
+        if ($webpPath) { $webp[$width] = $webpPath; }
+        // AVIF via GD is CPU-heavy on shared hosting, so enable it explicitly when the server has a fast encoder.
+        if (getenv('LEVIA_ENABLE_AVIF') === '1') {
+            $avifPath = optimized_image_variant($path, $width, 'avif', $avifQuality);
+            if ($avifPath) { $avif[$width] = $avifPath; }
+        }
+    }
+    return [
+        'src' => $webp ? end($webp) : $path,
+        'width' => $info['width'], 'height' => $info['height'],
+        'webp' => implode(', ', array_map(fn($url, $width): string => $url . ' ' . $width . 'w', $webp, array_keys($webp))),
+        'avif' => implode(', ', array_map(fn($url, $width): string => $url . ' ' . $width . 'w', $avif, array_keys($avif))),
+    ];
+}
+
+function responsive_image_html(string $path, string $alt, array $options = []): string
+{
+    $data = responsive_image_data($path, $options['widths'] ?? [480, 960, 1400], (int) ($options['webp_quality'] ?? 80), (int) ($options['avif_quality'] ?? 55));
+    $sizes = (string) ($options['sizes'] ?? '100vw');
+    $loading = (string) ($options['loading'] ?? 'lazy');
+    $priority = (string) ($options['fetchpriority'] ?? 'auto');
+    $class = trim((string) ($options['class'] ?? ''));
+    $parts = ['<picture>'];
+    if ($data['avif'] !== '') { $parts[] = '<source type="image/avif" srcset="' . e($data['avif']) . '" sizes="' . e($sizes) . '">'; }
+    if ($data['webp'] !== '') { $parts[] = '<source type="image/webp" srcset="' . e($data['webp']) . '" sizes="' . e($sizes) . '">'; }
+    $parts[] = '<img src="' . e($data['src']) . '" alt="' . e($alt) . '"' . ($class !== '' ? ' class="' . e($class) . '"' : '') . ($data['width'] ? ' width="' . $data['width'] . '" height="' . $data['height'] . '"' : '') . ' loading="' . e($loading) . '" decoding="async" fetchpriority="' . e($priority) . '">';
+    $parts[] = '</picture>';
+    return implode('', $parts);
+}
 function upload_image(string $field, ?string $fallback = null, array $options = []): ?string
 {
     if (empty($_FILES[$field]['name']) || ($_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
@@ -297,12 +392,7 @@ function upload_image(string $field, ?string $fallback = null, array $options = 
         return $fallback;
     }
 
-    $source = match ($mime) {
-        'image/jpeg' => @imagecreatefromjpeg($_FILES[$field]['tmp_name']),
-        'image/png' => @imagecreatefrompng($_FILES[$field]['tmp_name']),
-        'image/webp' => @imagecreatefromwebp($_FILES[$field]['tmp_name']),
-        default => false,
-    };
+    $source = load_gd_image($_FILES[$field]['tmp_name'], $mime);
     if (!$source) {
         return $fallback;
     }
@@ -344,7 +434,14 @@ function upload_image(string $field, ?string $fallback = null, array $options = 
         return $fallback;
     }
 
+    $path = 'uploads/' . $name;
+    responsive_image_data(
+        $path,
+        $options['responsive_widths'] ?? [480, 960, 1400],
+        max(60, min(90, (int) ($options['quality'] ?? 82))),
+        max(35, min(70, (int) ($options['avif_quality'] ?? 55)))
+    );
     clear_storefront_cache();
 
-    return 'uploads/' . $name;
+    return $path;
 }

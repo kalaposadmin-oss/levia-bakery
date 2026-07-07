@@ -33,6 +33,7 @@ body {
 }
 
 img { display: block; max-width: 100%; }
+.hero-showcase picture, .promo-hero-card picture, .product-image picture, .promo-banner picture, .blog-feature picture, .blog-detail-card > picture { display: contents; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 a { color: inherit; }
